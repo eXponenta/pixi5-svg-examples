@@ -455,15 +455,15 @@ export default class SVG extends PIXI.Graphics {
             y = command.end.y;
           }
           const beziers = arcToBezier({
-            px : currX, py : currY,
+            x1 : currX, y1 : currY,
             rx : command.radii.x, ry : command.radii.y,
-            cx : x, cy : y, 
-            xAxisRotation : command.rotation,
-            largeArcFlag: command.large,
-            sweepFlag: command.clockwise
+            x2 : x, y2 : y, 
+            phi : command.rotation,
+            fa: command.large,
+            fs: command.clockwise
           });
           for(let b of beziers) {
-            this.bezierCurveTo(b.x1, b.y1, b.x2, b.y2, b.x, b.y);
+            this.bezierCurveTo(b[2], b[3], b[4], b[5], b[6], b[7]);
           }
           console.log(command);
           break;

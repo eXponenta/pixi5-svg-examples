@@ -8,7 +8,7 @@ import {Viewport} from "pixi-viewport";
 
 const app = new Application({
   width: window.innerWidth,
-  height: window.innerHeight,
+  height: window.innerHeight / 2,
   backgroundColor: 0xffffff,
   resolution: window.devicePixelRatio,
   antialias: true
