@@ -1,7 +1,7 @@
 import dPathParse from "d-path-parser";
 import * as PIXI from "pixi.js";
 import tcolor from "tinycolor2";
-import {parseScientific, splitAttributeParams} from "./utils";
+import {parseScientific, splitAttributeParams, arcToBezier} from "./utils";
 
 let _lastComputedStyle = undefined;
 /**
@@ -320,7 +320,7 @@ export default class SVG extends PIXI.Graphics {
         this.beginFill(this.hexToUint(fill), 1)//opacityValue);
       }
     } else {
-      this.beginFill(rand, 1);
+      this.beginFill(0, 1);
     }
     
     this._fillStyle.visible = true;
@@ -441,6 +441,31 @@ export default class SVG extends PIXI.Graphics {
             (x = command.end.x),
             (y = command.end.y)
           );
+          break;
+        }
+        case "a":
+        case "A" : {
+          const currX = x;
+          const currY = y;
+          if(command.relative) {
+            x += command.end.x;
+            y += command.end.y;
+          } else{
+            x = command.end.x;
+            y = command.end.y;
+          }
+          const beziers = arcToBezier({
+            px : currX, py : currY,
+            rx : command.radii.x, ry : command.radii.y,
+            cx : x, cy : y, 
+            xAxisRotation : command.rotation,
+            largeArcFlag: command.large,
+            sweepFlag: command.clockwise
+          });
+          for(let b of beziers) {
+            this.bezierCurveTo(b.x1, b.y1, b.x2, b.y2, b.x, b.y);
+          }
+          console.log(command);
           break;
         }
         default: {

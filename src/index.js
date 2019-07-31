@@ -14,13 +14,13 @@ const app = new Application({
   antialias: true
 });
 
-app.stage = new Viewport().drag().pinch().wheel()
+//app.stage = new Viewport().drag().pinch().wheel()
 app.start();
 //PIXI.GraphicsGeometry.BATCHABLE_SIZE = 1000000;
 
 app.loader.baseUrl ="./data";
 app.loader
-  .add("svg","map.svg.txt", {crossOrigin : true})
+  .add("svg","a-test.svg.txt", {crossOrigin : true})
   .load(()=>{
     const t = app.loader.resources["svg"].data;
     const container = document.createElement("div");
