@@ -28,7 +28,7 @@ export default class SVG extends PIXI.Graphics {
    * @method PIXI.SVG#parseTransform
    * @param {SVGCircleElement} node
    */
-  parseTransform (node) {
+  svgTransform (node) {
 
     if (!node.getAttribute("transform")) return undefined;
 
@@ -86,9 +86,9 @@ export default class SVG extends PIXI.Graphics {
    * @private
    * @method PIXI.SVG#svgChildren
    * @param {Array<*>} children - Collection of SVG nodes
-   * @param {Boolean} [inherit=false] Whether to inherit fill settings.
+   * @param {Boolean} [parentStyle=undefined] Whether to inherit fill settings.
    */
-  svgChildren(children, parentStyle) {
+  svgChildren(children, parentStyle, parentMatrix) {
 
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
@@ -96,10 +96,21 @@ export default class SVG extends PIXI.Graphics {
       const shape = this.upacked ? new SVG(child, this.upacked) : this;
       const nodeName = child.nodeName.toLowerCase();
       const nodeStyle = this.svgStyle(child);
-      
+      const matrix = this.svgTransform(child);
+     
+      /**
+       * @type {PIXI.Matrix}
+       */
+      /*
+      let fullMatrix;
+      if(matrix) {
+        fullMatrix = matrix;
+        if(parentMatrix) {
+          fullMatrix.
+        }
+      }*/
       //compile full style inherited from all parents
-      const fullStyle = Object.assign(parentStyle || {}, nodeStyle);
-
+      const fullStyle = Object.assign({}, parentStyle || {}, nodeStyle);
 
       shape.fillShapes(child, fullStyle);
       switch (nodeName) {
@@ -299,16 +310,20 @@ export default class SVG extends PIXI.Graphics {
         : defaultLineWidth;
     const lineColor = stroke !== undefined ? this.hexToUint(stroke) : this.lineColor;
     const opacityValue = opacity !== undefined ? parseFloat(opacity) : 1;
-    const matrix = this.parseTransform(node);
+    const matrix = this.svgTransform(node);
     
-    const rand = 0;//Math.random() * 0xffffff | 0;
+    const rand = Math.random() * 0xffffff | 0;
     if (fill) {
       if (fill === "none") {  
-        this.beginFill(rand, 0);
+        this.beginFill(0, 0);
       } else {
-        this.beginFill(this.hexToUint(fill), opacityValue);
+        this.beginFill(this.hexToUint(fill), 1)//opacityValue);
       }
+    } else {
+      this.beginFill(rand, 1);
     }
+    
+    this._fillStyle.visible = true;
 
     this.lineStyle(lineWidth, lineColor, opacityValue);
 
