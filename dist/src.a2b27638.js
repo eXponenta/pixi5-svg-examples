@@ -43259,7 +43259,30 @@ function (_PIXI$Graphics) {
           case "S":
           case "C":
             {
-              this.bezierCurveTo(command.cp1.x, command.cp1.y, command.cp2.x, command.cp2.y, x = command.end.x, y = command.end.y);
+              var cp1 = command.cp1 || {
+                x: x,
+                y: y
+              };
+              var cp2 = command.cp2 || {
+                x: x,
+                y: y
+              };
+              var prevCp = {
+                x: x,
+                y: y
+              };
+
+              if (prevCommand) {
+                prevCp = prevCommand.cp || prevCommand.cp2 || prevCommand.end; //T is compute points from old points
+                //this.moveTo(prevCommand.end.x, prevCommand.end.y)
+
+                if (command.code === "S") {
+                  cp1.x = 2 * prevCommand.end.x - prevCp.x;
+                  cp1.y = 2 * prevCommand.end.y - prevCp.y;
+                }
+              }
+
+              this.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, x = command.end.x, y = command.end.y);
               break;
             }
 
@@ -43284,21 +43307,27 @@ function (_PIXI$Graphics) {
           case "T":
           case "Q":
             {
-              var _currX2 = x;
-              var _currY2 = y;
-              var cpx = x;
-              var cpy = y; //T is compute points from old points
+              var cp = command.cp || {
+                x: x,
+                y: y
+              };
+              var _prevCp = {
+                x: x,
+                y: y
+              };
 
-              if (command.code === "T") {
-                cpx = _currX2 + (prevCommand.end.x - prevCommand.cp.x);
-                cpy = _currY2 + (prevCommand.end.y - prevCommand.cp.y);
-              } else {
-                cpx = command.cp.x;
-                cpy = command.cp.y;
+              if (prevCommand) {
+                _prevCp = prevCommand.cp || prevCommand.cp2 || prevCommand.end; //T is compute points from old points
+                //this.moveTo(prevCommand.end.x, prevCommand.end.y)
+
+                if (command.code === "T") {
+                  cp.x = 2 * prevCommand.end.x - _prevCp.x;
+                  cp.y = 2 * prevCommand.end.y - _prevCp.y;
+                }
               }
 
-              console.log(command.code, cpx, cpy);
-              this.quadraticCurveTo(cpx, cpy, x = command.end.x, y = command.end.y);
+              console.log(cp.x, cp.y);
+              this.quadraticCurveTo(cp.x, cp.y, x = command.end.x, y = command.end.y);
               break;
             }
           //arc as bezier
@@ -43306,8 +43335,8 @@ function (_PIXI$Graphics) {
           case "a":
           case "A":
             {
-              var _currX3 = x;
-              var _currY3 = y;
+              var _currX2 = x;
+              var _currY2 = y;
 
               if (command.relative) {
                 x += command.end.x;
@@ -43318,8 +43347,8 @@ function (_PIXI$Graphics) {
               }
 
               var beziers = (0, _utils.arcToBezier)({
-                x1: _currX3,
-                y1: _currY3,
+                x1: _currX2,
+                y1: _currY2,
                 rx: command.radii.x,
                 ry: command.radii.y,
                 x2: x,
@@ -47164,7 +47193,7 @@ var app = new PIXI.Application({
 //PIXI.GraphicsGeometry.BATCHABLE_SIZE = 1000000;
 
 app.loader.baseUrl = "./data";
-app.loader.add("svg", "t-test.svg.txt", {
+app.loader.add("svg", "shape-test.svg.txt", {
   crossOrigin: true
 }).load(function () {
   var t = app.loader.resources["svg"].data;

@@ -391,11 +391,27 @@ export default class SVG extends PIXI.Graphics {
 				}
 				case "S":
 				case "C": {
+
+					let cp1 = command.cp1 || {x, y};
+					let cp2 = command.cp2 || {x, y};
+					
+					let prevCp = {x , y}; 
+					if(prevCommand) {
+						prevCp = (prevCommand.cp || prevCommand.cp2 || prevCommand.end);
+					
+						//T is compute points from old points
+						//this.moveTo(prevCommand.end.x, prevCommand.end.y)
+						if (command.code === "S") {
+							cp1.x = 2 * prevCommand.end.x - prevCp.x;
+							cp1.y = 2 * prevCommand.end.y - prevCp.y;
+						}
+					}
+
 					this.bezierCurveTo(
-						command.cp1.x,
-						command.cp1.y,
-						command.cp2.x,
-						command.cp2.y,
+						cp1.x,
+						cp1.y,
+						cp2.x,
+						cp2.y,
 						(x = command.end.x),
 						(y = command.end.y)
 					);
@@ -429,23 +445,22 @@ export default class SVG extends PIXI.Graphics {
 				}
 				case "T":
 				case "Q": {
-					const currX = x;
-					const currY = y;
-					let cpx = x;
-					let cpy = y;
 
-
-					//T is compute points from old points
-					if (command.code === "T") {
-						cpx = currX + (prevCommand.end.x - prevCommand.cp.x);
-						cpy = currY + (prevCommand.end.y - prevCommand.cp.y);
-					} else {
-						cpx = command.cp.x;
-						cpy = command.cp.y;
+					let cp = command.cp || {x, y};
+					let prevCp = {x , y}; 
+					if(prevCommand) {
+						prevCp = (prevCommand.cp || prevCommand.cp2 || prevCommand.end);
+					
+						//T is compute points from old points
+						//this.moveTo(prevCommand.end.x, prevCommand.end.y)
+						if (command.code === "T") {
+							cp.x = 2 * prevCommand.end.x - prevCp.x;
+							cp.y = 2 * prevCommand.end.y - prevCp.y;
+						}
 					}
 
-					console.log(command.code, cpx, cpy);
-					this.quadraticCurveTo(cpx, cpy, (x = command.end.x), (y = command.end.y));
+					console.log(cp.x, cp.y)
+					this.quadraticCurveTo(cp.x, cp.y, (x = command.end.x), (y = command.end.y));
 					break;
 				}
 
