@@ -9,12 +9,11 @@ const app = new Application({
   width: window.innerWidth,
   height: window.innerHeight / 2,
   backgroundColor: 0xffffff,
-  resolution: window.devicePixelRatio,
   antialias: true
 });
 
 //app.stage = new Viewport().drag().pinch().wheel()
-app.start();
+//app.start();
 //PIXI.GraphicsGeometry.BATCHABLE_SIZE = 1000000;
 
 app.loader.baseUrl ="./data";
@@ -38,6 +37,7 @@ app.loader
     app.stage.addChild(svgG)//, svgGG);
     console.log(svgG);
 
+    app.render();
   });
 
 document.body.appendChild(app.view);

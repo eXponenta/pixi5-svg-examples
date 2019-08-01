@@ -42538,7 +42538,7 @@ else {
 
 })(Math);
 
-},{}],"src/utils.js":[function(require,module,exports) {
+},{}],"src/svg/utils.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -42755,7 +42755,7 @@ function arcToBezier(_ref) {
 }
 
 ;
-},{}],"src/svg.js":[function(require,module,exports) {
+},{}],"src/svg/index.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -42831,11 +42831,11 @@ function (_PIXI$Graphics) {
     return _this;
   }
   /**
-  * Parse transform attribute
-  * @private
-  * @method PIXI.SVG#parseTransform
-  * @param {SVGCircleElement} node
-  */
+   * Parse transform attribute
+   * @private
+   * @method PIXI.SVG#parseTransform
+   * @param {SVGCircleElement} node
+   */
 
 
   _createClass(SVG, [{
@@ -42869,8 +42869,8 @@ function (_PIXI$Graphics) {
         graphics.x += parseScientific(transformValues[1]);
         graphics.y += parseScientific(transformValues[2]);
         }
-          graphics.rotation = parseScientific(transformValues[0]);
-          if (transformValues.length > 1) {
+        	graphics.rotation = parseScientific(transformValues[0]);
+        	if (transformValues.length > 1) {
         graphics.x -= parseScientific(transformValues[1]);
         graphics.y -= parseScientific(transformValues[2]);
         }*/
@@ -42902,10 +42902,10 @@ function (_PIXI$Graphics) {
         /*
         let fullMatrix;
         if(matrix) {
-          fullMatrix = matrix;
-          if(parentMatrix) {
-            fullMatrix.
-          }
+        fullMatrix = matrix;
+        if(parentMatrix) {
+         fullMatrix.
+        }
         }*/
         //compile full style inherited from all parents
 
@@ -43093,18 +43093,18 @@ function (_PIXI$Graphics) {
         }
       }
       /*
-          if(!result.stroke || !result.fill) {
-            const computed =  window.getComputedStyle(node);
-            //console.log(computed);
-            result.stroke = computed.getPropertyValue("stroke");
-            result.fill = computed.getPropertyValue("fill");
-            if(!result.stroke)
-              result.stroke = null;
-            if(!result.fill)
-              result.fill = null;
-            
-            console.log(result);
-          }*/
+      if(!result.stroke || !result.fill) {
+       const computed =  window.getComputedStyle(node);
+       //console.log(computed);
+       result.stroke = computed.getPropertyValue("stroke");
+       result.fill = computed.getPropertyValue("fill");
+       if(!result.stroke)
+      result.stroke = null;
+       if(!result.fill)
+      result.fill = null;
+       
+       console.log(result);
+      }*/
 
 
       return result;
@@ -43286,7 +43286,19 @@ function (_PIXI$Graphics) {
             {
               var _currX2 = x;
               var _currY2 = y;
-              this.quadraticCurveTo(command.cp.x, command.cp.y, x = command.end.x, y = command.end.y);
+              var cpx = x;
+              var cpy = y; //T is compute points from old points
+
+              if (command.code === "T") {
+                cpx = _currX2 + (prevCommand.end.x - prevCommand.cp.x);
+                cpy = _currY2 + (prevCommand.end.y - prevCommand.cp.y);
+              } else {
+                cpx = command.cp.x;
+                cpy = command.cp.y;
+              }
+
+              console.log(command.code, cpx, cpy);
+              this.quadraticCurveTo(cpx, cpy, x = command.end.x, y = command.end.y);
               break;
             }
           //arc as bezier
@@ -43360,7 +43372,7 @@ function (_PIXI$Graphics) {
 }(PIXI.Graphics);
 
 exports.default = SVG;
-},{"d-path-parser":"node_modules/d-path-parser/parser.js","pixi.js":"node_modules/pixi.js/lib/pixi.es.js","tinycolor2":"node_modules/tinycolor2/tinycolor.js","./utils":"src/utils.js"}],"node_modules/pixi-viewport/dist/viewport.es.js":[function(require,module,exports) {
+},{"d-path-parser":"node_modules/d-path-parser/parser.js","pixi.js":"node_modules/pixi.js/lib/pixi.es.js","tinycolor2":"node_modules/tinycolor2/tinycolor.js","./utils":"src/svg/utils.js"}],"node_modules/pixi-viewport/dist/viewport.es.js":[function(require,module,exports) {
 var global = arguments[3];
 "use strict";
 
@@ -47146,11 +47158,10 @@ var app = new PIXI.Application({
   width: window.innerWidth,
   height: window.innerHeight / 2,
   backgroundColor: 0xffffff,
-  resolution: window.devicePixelRatio,
   antialias: true
 }); //app.stage = new Viewport().drag().pinch().wheel()
-
-app.start(); //PIXI.GraphicsGeometry.BATCHABLE_SIZE = 1000000;
+//app.start();
+//PIXI.GraphicsGeometry.BATCHABLE_SIZE = 1000000;
 
 app.loader.baseUrl = "./data";
 app.loader.add("svg", "t-test.svg.txt", {
@@ -47169,9 +47180,10 @@ app.loader.add("svg", "t-test.svg.txt", {
   app.stage.addChild(svgG); //, svgGG);
 
   console.log(svgG);
+  app.render();
 });
 document.body.appendChild(app.view);
-},{"pixi.js":"node_modules/pixi.js/lib/pixi.es.js","./svg":"src/svg.js","pixi-viewport":"node_modules/pixi-viewport/dist/viewport.es.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"pixi.js":"node_modules/pixi.js/lib/pixi.es.js","./svg":"src/svg/index.js","pixi-viewport":"node_modules/pixi-viewport/dist/viewport.es.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -47199,7 +47211,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "52572" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56079" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

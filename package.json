@@ -4,7 +4,7 @@
   "description": "Simple Parcel Sandbox",
   "main": "index.html",
   "scripts": {
-    "start": "parcel index.html --open",
+    "start": "parcel server index.html --open",
     "build": "parcel build index.html"
   },
   "dependencies": {
