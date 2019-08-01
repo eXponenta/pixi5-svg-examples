@@ -18,7 +18,7 @@ const app = new Application({
 
 app.loader.baseUrl ="./data";
 app.loader
-  .add("svg","shape-test.svg.txt", {crossOrigin : true})
+  .add("svg","s-test.svg.txt", {crossOrigin : true})
   .load(()=>{
     const t = app.loader.resources["svg"].data;
     const container = document.createElement("div");

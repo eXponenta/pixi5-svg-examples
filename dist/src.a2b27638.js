@@ -43263,7 +43263,7 @@ function (_PIXI$Graphics) {
                 x: x,
                 y: y
               };
-              var cp2 = command.cp2 || {
+              var cp2 = command.cp2 || command.cp || {
                 x: x,
                 y: y
               };
@@ -43272,13 +43272,15 @@ function (_PIXI$Graphics) {
                 y: y
               };
 
-              if (prevCommand) {
+              if (prevCommand && command.code === "S") {
                 prevCp = prevCommand.cp || prevCommand.cp2 || prevCommand.end; //T is compute points from old points
                 //this.moveTo(prevCommand.end.x, prevCommand.end.y)
 
-                if (command.code === "S") {
+                if (prevCommand.code == "S" || prevCommand.code == "C") {
                   cp1.x = 2 * prevCommand.end.x - prevCp.x;
                   cp1.y = 2 * prevCommand.end.y - prevCp.y;
+                } else {
+                  cp1 = cp2;
                 }
               }
 
@@ -47193,7 +47195,7 @@ var app = new PIXI.Application({
 //PIXI.GraphicsGeometry.BATCHABLE_SIZE = 1000000;
 
 app.loader.baseUrl = "./data";
-app.loader.add("svg", "shape-test.svg.txt", {
+app.loader.add("svg", "s-test.svg.txt", {
   crossOrigin: true
 }).load(function () {
   var t = app.loader.resources["svg"].data;

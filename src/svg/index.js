@@ -393,17 +393,20 @@ export default class SVG extends PIXI.Graphics {
 				case "C": {
 
 					let cp1 = command.cp1 || {x, y};
-					let cp2 = command.cp2 || {x, y};
+					let cp2 = command.cp2 || command.cp || {x, y};
 					
 					let prevCp = {x , y}; 
-					if(prevCommand) {
+
+					if(prevCommand && command.code === "S" ) {
 						prevCp = (prevCommand.cp || prevCommand.cp2 || prevCommand.end);
 					
 						//T is compute points from old points
 						//this.moveTo(prevCommand.end.x, prevCommand.end.y)
-						if (command.code === "S") {
+						if ((prevCommand.code == "S" || prevCommand.code == "C")) {
 							cp1.x = 2 * prevCommand.end.x - prevCp.x;
 							cp1.y = 2 * prevCommand.end.y - prevCp.y;
+						} else {
+							cp1 = cp2;
 						}
 					}
 
