@@ -42546,6 +42546,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.parseScientific = parseScientific;
 exports.splitAttributeParams = splitAttributeParams;
+exports.parseTransform = parseTransform;
 exports.arcToBezier = arcToBezier;
 
 function parseScientific(numberString) {
@@ -42574,6 +42575,28 @@ function splitAttributeParams(attr) {
     //Especially in IE Edge, the parameters do not have to be split by commas, IE even replaces commas with spaces!
     return attr.split(" ");
   }
+}
+/**
+ * Parse transform attribute
+ * @param {string} transform 
+ */
+
+
+function parseTransform(transform) {
+  transform = transform.replace(/\ /gi, ",");
+  var token = transform;
+  var math = token.match(/(\w+\((\-?\d+\.?\d*e?\-?\d*,?)+\))+/g);
+  var result = [];
+
+  for (var i in math) {
+    var c = math[i].match(/[\w\.\-]+/g);
+    result.push({
+      command: c.shift(),
+      params: c
+    });
+  }
+
+  return result;
 }
 
 var TAU = Math.PI * 2;
@@ -42753,8 +42776,6 @@ function arcToBezier(_ref) {
     return curve;
   });
 }
-
-;
 },{}],"src/svg/index.js":[function(require,module,exports) {
 "use strict";
 
@@ -42862,38 +42883,41 @@ function (_PIXI$Graphics) {
     value: function svgTransform(node) {
       if (!node.getAttribute("transform")) return undefined;
       var matrix = new PIXI.Matrix();
-      var transformAttr = node.getAttribute("transform").trim().split("(");
-      var transformCommand = transformAttr[0];
-      var transformValues = transformAttr[1].replace(")", "");
-      transformValues = (0, _utils.splitAttributeParams)(transformValues);
+      var transformAttr = node.getAttribute("transform");
+      var commands = (0, _utils.parseTransform)(transformAttr);
 
-      if (transformCommand === "matrix") {
-        matrix.a = (0, _utils.parseScientific)(transformValues[0]);
-        matrix.b = (0, _utils.parseScientific)(transformValues[1]);
-        matrix.c = (0, _utils.parseScientific)(transformValues[2]);
-        matrix.d = (0, _utils.parseScientific)(transformValues[3]);
-        matrix.tx = (0, _utils.parseScientific)(transformValues[4]);
-        matrix.ty = (0, _utils.parseScientific)(transformValues[5]); //graphics.transform.localTransform = transformMatrix;
-      } else if (transformCommand === "translate") {
-        var dx = (0, _utils.parseScientific)(transformValues[0]);
-        var dy = (0, _utils.parseScientific)(transformValues[1]);
-        console.log("translate", node, dx, dy);
-        matrix.translate(dx, dy);
-      } else if (transformCommand === "scale") {
-        var sx = (0, _utils.parseScientific)(transformValues[0]);
-        var sy = (0, _utils.parseScientific)(transformValues[1]);
-        matrix.scale(sx, sy);
-      } else if (transformCommand === "rotate") {
-        console.log("Not implemented");
-        /*if (transformValues.length > 1) {
-        graphics.x += parseScientific(transformValues[1]);
-        graphics.y += parseScientific(transformValues[2]);
+      for (var key in commands) {
+        var command = commands[key].command;
+        var values = commands[key].params;
+
+        if (command === "matrix") {
+          matrix.a = (0, _utils.parseScientific)(values[0]);
+          matrix.b = (0, _utils.parseScientific)(values[1]);
+          matrix.c = (0, _utils.parseScientific)(values[2]);
+          matrix.d = (0, _utils.parseScientific)(values[3]);
+          matrix.tx = (0, _utils.parseScientific)(values[4]);
+          matrix.ty = (0, _utils.parseScientific)(values[5]); //graphics.transform.localTransform = transformMatrix;
+        } else if (command === "translate") {
+          var dx = (0, _utils.parseScientific)(values[0]);
+          var dy = values.length > 1 ? (0, _utils.parseScientific)(values[1]) : dx;
+          matrix.translate(dx, dy);
+        } else if (command === "scale") {
+          var sx = (0, _utils.parseScientific)(values[0]);
+          var sy = (0, _utils.parseScientific)(values[1]);
+          matrix.scale(sx, sy);
+        } else if (command === "rotate") {
+          var _dx = 0;
+          var _dy = 0;
+
+          if (values.length > 1) {
+            _dx = (0, _utils.parseScientific)(values[1]);
+            _dy = (0, _utils.parseScientific)(values[2]);
+          }
+
+          matrix.translate(_dx, _dy);
+          matrix.rotate((0, _utils.parseScientific)(values[0]) * Math.PI / 180);
+          matrix.translate(-_dx, -_dy);
         }
-        	graphics.rotation = parseScientific(transformValues[0]);
-        	if (transformValues.length > 1) {
-        graphics.x -= parseScientific(transformValues[1]);
-        graphics.y -= parseScientific(transformValues[2]);
-        }*/
       }
 
       return matrix;
@@ -43089,7 +43113,9 @@ function (_PIXI$Graphics) {
       var result = {
         fill: node.getAttribute("fill"),
         opacity: node.getAttribute("opacity"),
+        fillOpacity: node.getAttribute("fill-opacity"),
         stroke: node.getAttribute("stroke"),
+        strokeOpacity: node.getAttribute("stroke-opacity"),
         strokeWidth: node.getAttribute("stroke-width")
       };
 
@@ -43164,24 +43190,27 @@ function (_PIXI$Graphics) {
       var fill = style.fill,
           opacity = style.opacity,
           stroke = style.stroke,
-          strokeWidth = style.strokeWidth;
+          strokeWidth = style.strokeWidth,
+          strokeOpacity = style.strokeOpacity,
+          fillOpacity = style.fillOpacity;
       var defaultLineWidth = stroke !== undefined ? 1 : 0;
       var lineWidth = strokeWidth !== undefined ? Math.max(.5, parseFloat(strokeWidth)) : defaultLineWidth;
       var lineColor = stroke !== undefined ? this.hexToUint(stroke) : this.lineColor;
-      var opacityValue = opacity !== undefined ? parseFloat(opacity) : 1;
+      var strokeOpacityValue = opacity !== undefined ? parseFloat(opacity) : fillOpacity !== undefined ? parseFloat(strokeOpacity) : 1;
+      var fillOpacityValue = opacity !== undefined ? parseFloat(opacity) : strokeOpacity !== undefined ? parseFloat(fillOpacity) : 1;
       var matrix = this.svgTransform(node);
 
       if (fill) {
         if (fill === "none" || fill === "transparent") {
           this.beginFill(0, 0);
         } else {
-          this.beginFill(this.hexToUint(fill), 1); //opacityValue);
+          this.beginFill(this.hexToUint(fill), fillOpacityValue);
         }
       } else {
         this.beginFill(0, 1);
       }
 
-      this.lineStyle(lineWidth, lineColor, opacityValue);
+      this.lineStyle(lineWidth, lineColor, strokeOpacityValue);
       this.setMatrix(matrix); // @if DEBUG
 
       if (node.getAttribute("stroke-linejoin")) {

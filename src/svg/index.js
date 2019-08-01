@@ -1,7 +1,7 @@
 import dPathParse from "d-path-parser";
 import * as PIXI from "pixi.js";
 import tcolor from "tinycolor2";
-import { parseScientific, splitAttributeParams, arcToBezier } from "./utils";
+import { parseScientific, splitAttributeParams, arcToBezier, parseTransform} from "./utils";
 
 
 //Ток Ваня мог так накосячить, что нужно это
@@ -51,46 +51,48 @@ export default class SVG extends PIXI.Graphics {
 	svgTransform(node) {
 		if (!node.getAttribute("transform")) return undefined;
 
-		var matrix = new PIXI.Matrix();
-		var transformAttr = node
-			.getAttribute("transform")
-			.trim()
-			.split("(");
-		var transformCommand = transformAttr[0];
-		var transformValues = transformAttr[1].replace(")", "");
-		transformValues = splitAttributeParams(transformValues);
+		const matrix = new PIXI.Matrix();
+		const transformAttr = node
+			.getAttribute("transform");
 
-		if (transformCommand === "matrix") {
-			matrix.a = parseScientific(transformValues[0]);
-			matrix.b = parseScientific(transformValues[1]);
-			matrix.c = parseScientific(transformValues[2]);
-			matrix.d = parseScientific(transformValues[3]);
-			matrix.tx = parseScientific(transformValues[4]);
-			matrix.ty = parseScientific(transformValues[5]);
-			//graphics.transform.localTransform = transformMatrix;
-		} else if (transformCommand === "translate") {
-			const dx = parseScientific(transformValues[0]);
-			const dy = parseScientific(transformValues[1]);
+		const commands = parseTransform(transformAttr);
 
-			console.log("translate", node, dx, dy);
-			matrix.translate(dx, dy);
-		} else if (transformCommand === "scale") {
-			const sx = parseScientific(transformValues[0]);
-			const sy = parseScientific(transformValues[1]);
-			matrix.scale(sx, sy);
-		} else if (transformCommand === "rotate") {
-			console.log("Not implemented");
-			/*if (transformValues.length > 1) {
-		graphics.x += parseScientific(transformValues[1]);
-		graphics.y += parseScientific(transformValues[2]);
-		}
+		for(let key in commands) {
+			let command = commands[ key ].command;
+			let values = commands[ key ].params;
 
-		graphics.rotation = parseScientific(transformValues[0]);
+			if (command === "matrix") {
+				matrix.a = parseScientific(values[0]);
+				matrix.b = parseScientific(values[1]);
+				matrix.c = parseScientific(values[2]);
+				matrix.d = parseScientific(values[3]);
+				matrix.tx = parseScientific(values[4]);
+				matrix.ty = parseScientific(values[5]);
+				//graphics.transform.localTransform = transformMatrix;
+			} else if (command === "translate") {
+				const dx = parseScientific(values[0]);
+				const dy = values.length > 1 ?  parseScientific(values[1]) : dx;
+				matrix.translate(dx, dy);
 
-		if (transformValues.length > 1) {
-		graphics.x -= parseScientific(transformValues[1]);
-		graphics.y -= parseScientific(transformValues[2]);
-		}*/
+			} else if (command === "scale") {
+				const sx = parseScientific(values[0]);
+				const sy = parseScientific(values[1]);
+				matrix.scale(sx, sy);
+
+			} else if (command === "rotate") {
+				
+				let dx = 0;
+				let dy = 0;
+
+				if (values.length > 1) {
+					dx = parseScientific(values[1]);
+					dy = parseScientific(values[2]);
+				}
+
+				matrix.translate(dx, dy);
+				matrix.rotate(parseScientific(values[0]) * Math.PI / 180);
+				matrix.translate(-dx, -dy);
+			}
 		}
 
 		return matrix;
@@ -256,7 +258,9 @@ export default class SVG extends PIXI.Graphics {
 		const result = {
 			fill: node.getAttribute("fill"),
 			opacity: node.getAttribute("opacity"),
+			fillOpacity: node.getAttribute("fill-opacity"),
 			stroke: node.getAttribute("stroke"),
+			strokeOpacity : node.getAttribute("stroke-opacity"),
 			strokeWidth: node.getAttribute("stroke-width")
 		};
 		if (style !== null) {
@@ -318,25 +322,31 @@ export default class SVG extends PIXI.Graphics {
 	 * @param {} style
 	 */
 	fillShapes(node, style) {
-		const { fill, opacity, stroke, strokeWidth } = style;
+		const { fill, opacity, stroke, strokeWidth, strokeOpacity, fillOpacity } = style;
 		const defaultLineWidth = stroke !== undefined ? 1 : 0;
 		const lineWidth = strokeWidth !== undefined ? Math.max(.5, parseFloat(strokeWidth)) : defaultLineWidth;
 		const lineColor = stroke !== undefined ? this.hexToUint(stroke) : this.lineColor;
-		const opacityValue = opacity !== undefined ? parseFloat(opacity) : 1;
 		
+		const strokeOpacityValue = 
+			(opacity !== undefined) ? parseFloat(opacity) : (fillOpacity !== undefined ? parseFloat(strokeOpacity) : 1);
+		
+		const fillOpacityValue = 
+			(opacity !== undefined) ? parseFloat(opacity) : (strokeOpacity !== undefined ? parseFloat(fillOpacity) : 1);
+		
+
 		const matrix = this.svgTransform(node);
 
 		if (fill) {
 			if (fill === "none" || fill === "transparent") {
 				this.beginFill(0, 0);
 			} else {
-				this.beginFill(this.hexToUint(fill), 1); //opacityValue);
+				this.beginFill(this.hexToUint(fill), fillOpacityValue);
 			}
 		} else {
 			this.beginFill(0, 1);
 		}
 
-		this.lineStyle(lineWidth, lineColor, opacityValue);
+		this.lineStyle(lineWidth, lineColor, strokeOpacityValue);
 		this.setMatrix(matrix);
 	
 
