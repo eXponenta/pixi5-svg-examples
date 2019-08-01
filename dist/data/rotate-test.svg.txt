@@ -7,6 +7,4 @@
 
   <!-- Здесь мы добавим текстовый элемент, повернем и перенесем оба элемента -->
   <rect x="50" y="50" height="100" width="100" style="stroke:#000; fill: #0086B2" transform="translate(30) rotate(45 50 50)"></rect>
-  <text x="60" y="105" transform="translate(30) rotate(45 50 50)"> Hello Moz! </text>
-
 </svg>

@@ -42884,9 +42884,9 @@ function (_PIXI$Graphics) {
       if (!node.getAttribute("transform")) return undefined;
       var matrix = new PIXI.Matrix();
       var transformAttr = node.getAttribute("transform");
-      var commands = (0, _utils.parseTransform)(transformAttr);
+      var commands = (0, _utils.parseTransform)(transformAttr); //apply transform matrix right to left
 
-      for (var key in commands) {
+      for (var key = commands.length - 1; key >= 0; --key) {
         var command = commands[key].command;
         var values = commands[key].params;
 
@@ -42896,14 +42896,15 @@ function (_PIXI$Graphics) {
           matrix.c = (0, _utils.parseScientific)(values[2]);
           matrix.d = (0, _utils.parseScientific)(values[3]);
           matrix.tx = (0, _utils.parseScientific)(values[4]);
-          matrix.ty = (0, _utils.parseScientific)(values[5]); //graphics.transform.localTransform = transformMatrix;
+          matrix.ty = (0, _utils.parseScientific)(values[5]);
+          return matrix; //graphics.transform.localTransform = transformMatrix;
         } else if (command === "translate") {
           var dx = (0, _utils.parseScientific)(values[0]);
-          var dy = values.length > 1 ? (0, _utils.parseScientific)(values[1]) : dx;
+          var dy = (0, _utils.parseScientific)(values[1]) || 0;
           matrix.translate(dx, dy);
         } else if (command === "scale") {
           var sx = (0, _utils.parseScientific)(values[0]);
-          var sy = (0, _utils.parseScientific)(values[1]);
+          var sy = values.length > 1 ? (0, _utils.parseScientific)(values[1]) : sx;
           matrix.scale(sx, sy);
         } else if (command === "rotate") {
           var _dx = 0;
@@ -42914,12 +42915,11 @@ function (_PIXI$Graphics) {
             _dy = (0, _utils.parseScientific)(values[2]);
           }
 
-          matrix.translate(_dx, _dy);
-          matrix.rotate((0, _utils.parseScientific)(values[0]) * Math.PI / 180);
-          matrix.translate(-_dx, -_dy);
+          matrix.translate(-_dx, -_dy).rotate((0, _utils.parseScientific)(values[0]) * Math.PI / 180).translate(_dx, _dy);
         }
       }
 
+      console.log(matrix);
       return matrix;
     }
     /**
@@ -47298,7 +47298,7 @@ var app = new PIXI.Application({
 var c = document.querySelector("#app");
 app.stage = new _pixiViewport.Viewport().drag().pinch().wheel();
 app.loader.baseUrl = "./data";
-app.loader.add("svg", "map2.svg.txt", {
+app.loader.add("svg", "rotate-test.svg.txt", {
   crossOrigin: true
 }).load(function () {
   var t = app.loader.resources["svg"].data;

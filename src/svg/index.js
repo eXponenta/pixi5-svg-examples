@@ -57,7 +57,9 @@ export default class SVG extends PIXI.Graphics {
 
 		const commands = parseTransform(transformAttr);
 
-		for(let key in commands) {
+		//apply transform matrix right to left
+		for(let key = commands.length - 1; key >= 0; -- key) {
+			
 			let command = commands[ key ].command;
 			let values = commands[ key ].params;
 
@@ -68,15 +70,17 @@ export default class SVG extends PIXI.Graphics {
 				matrix.d = parseScientific(values[3]);
 				matrix.tx = parseScientific(values[4]);
 				matrix.ty = parseScientific(values[5]);
+
+				return matrix;
 				//graphics.transform.localTransform = transformMatrix;
 			} else if (command === "translate") {
 				const dx = parseScientific(values[0]);
-				const dy = values.length > 1 ?  parseScientific(values[1]) : dx;
+				const dy = parseScientific(values[1]) || 0;
 				matrix.translate(dx, dy);
 
 			} else if (command === "scale") {
 				const sx = parseScientific(values[0]);
-				const sy = parseScientific(values[1]);
+				const sy = values.length > 1 ? parseScientific(values[1]) : sx;
 				matrix.scale(sx, sy);
 
 			} else if (command === "rotate") {
@@ -89,12 +93,14 @@ export default class SVG extends PIXI.Graphics {
 					dy = parseScientific(values[2]);
 				}
 
-				matrix.translate(dx, dy);
-				matrix.rotate(parseScientific(values[0]) * Math.PI / 180);
-				matrix.translate(-dx, -dy);
+				matrix
+					.translate(-dx, -dy)
+					.rotate(parseScientific(values[0]) * Math.PI / 180)
+					.translate(dx, dy);
 			}
 		}
 
+		console.log(matrix);
 		return matrix;
 	}
 

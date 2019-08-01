@@ -17,7 +17,7 @@ app.stage = new Viewport().drag().pinch().wheel();
 
 app.loader.baseUrl ="./data";
 app.loader
-  .add("svg","map2.svg.txt", {crossOrigin : true})
+  .add("svg","rotate-test.svg.txt", {crossOrigin : true})
   .load(()=>{
     const t = app.loader.resources["svg"].data;
     const container = document.createElement("div");
