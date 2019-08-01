@@ -42822,6 +42822,15 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
+/**
+ * @typedef {Object} DefaultOptions
+ * @member {number} lineWidth?
+ * @member {number} lineColor?
+ * @member {number} lineOpacity?
+ * @member {number} fillColor?
+ * @member {number} fillOpacity?
+ * @member {boolean} unpackTree?
+ */
 //Ток Ваня мог так накосячить, что нужно это
 //@see https://github.com/pixijs/pixi.js/pull/5981
 //@ts-ignore
@@ -42856,15 +42865,26 @@ function (_PIXI$Graphics) {
   _inherits(SVG, _PIXI$Graphics);
 
   /**
-   * Constructor
+   * Create Gra[hocs from svg
+   * @param {SVGElement} svg 
+   * @param {DefaultOptions} options 
    */
-  function SVG(svg, unpackTree) {
+  function SVG(svg) {
     var _this;
+
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
+      unpackTree: false,
+      lineColor: 0,
+      lineOpacity: 0,
+      fillColor: 0,
+      fillOpacity: 0,
+      lineWidth: 1
+    };
 
     _classCallCheck(this, SVG);
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(SVG).call(this));
-    _this.upacked = unpackTree; //this.fillShapes(svg);
+    _this.options = options; //@ts-ignore
 
     _this.svgChildren(svg.children);
 
@@ -42874,7 +42894,7 @@ function (_PIXI$Graphics) {
    * Parse transform attribute
    * @private
    * @method PIXI.SVG#parseTransform
-   * @param {SVGCircleElement} node
+   * @param {SVGElement} node
    */
 
 
@@ -42936,7 +42956,7 @@ function (_PIXI$Graphics) {
     value: function svgChildren(children, parentStyle, parentMatrix) {
       for (var i = 0; i < children.length; i++) {
         var child = children[i];
-        var shape = this.upacked ? new SVG(child, this.upacked) : this;
+        var shape = this.options.upacked ? new SVG(child, this.options) : this;
         var nodeName = child.nodeName.toLowerCase();
         var nodeStyle = this.svgStyle(child);
         var matrix = this.svgTransform(child);
@@ -43006,7 +43026,7 @@ function (_PIXI$Graphics) {
 
         shape.svgChildren(child.children, fullStyle, matrix);
 
-        if (this.upacked) {
+        if (this.options.upacked) {
           this.addChild(shape);
         }
       }
@@ -43057,8 +43077,8 @@ function (_PIXI$Graphics) {
 
       var width = parseFloat(node.getAttribute(widthProp));
       var height = parseFloat(node.getAttribute(heightProp));
-      var cx = node.getAttribute("cx") || 0;
-      var cy = node.getAttribute("cy") || 0;
+      var cx = node.getAttribute("cx") || "0";
+      var cy = node.getAttribute("cy") || "0";
       var x = 0;
       var y = 0;
 
@@ -43181,7 +43201,7 @@ function (_PIXI$Graphics) {
      * @private
      * @method PIXI.SVG#fillShapes
      * @param {SVGElement} node
-     * @param {} style
+     * @param {*} style
      */
 
   }, {
@@ -43193,9 +43213,9 @@ function (_PIXI$Graphics) {
           strokeWidth = style.strokeWidth,
           strokeOpacity = style.strokeOpacity,
           fillOpacity = style.fillOpacity;
-      var defaultLineWidth = stroke !== undefined ? 1 : 0;
-      var lineWidth = strokeWidth !== undefined ? Math.max(.5, parseFloat(strokeWidth)) : defaultLineWidth;
-      var lineColor = stroke !== undefined ? this.hexToUint(stroke) : this.lineColor;
+      var defaultLineWidth = stroke !== undefined ? this.options.lineWidth || 1 : 0;
+      var lineWidth = strokeWidth !== undefined ? Math.max(0.5, parseFloat(strokeWidth)) : defaultLineWidth;
+      var lineColor = stroke !== undefined ? this.hexToUint(stroke) : this.options.lineColor;
       var strokeOpacityValue = opacity !== undefined ? parseFloat(opacity) : fillOpacity !== undefined ? parseFloat(strokeOpacity) : 1;
       var fillOpacityValue = opacity !== undefined ? parseFloat(opacity) : strokeOpacity !== undefined ? parseFloat(fillOpacity) : 1;
       var matrix = this.svgTransform(node);
@@ -43207,7 +43227,7 @@ function (_PIXI$Graphics) {
           this.beginFill(this.hexToUint(fill), fillOpacityValue);
         }
       } else {
-        this.beginFill(0, 1);
+        this.beginFill(0, 0);
       }
 
       this.lineStyle(lineWidth, lineColor, strokeOpacityValue);

@@ -1,7 +1,17 @@
 import dPathParse from "d-path-parser";
 import * as PIXI from "pixi.js";
 import tcolor from "tinycolor2";
-import { parseScientific, splitAttributeParams, arcToBezier, parseTransform} from "./utils";
+import { parseScientific, arcToBezier, parseTransform } from "./utils";
+
+/**
+ * @typedef {Object} DefaultOptions
+ * @member {number} lineWidth?
+ * @member {number} lineColor?
+ * @member {number} lineOpacity?
+ * @member {number} fillColor?
+ * @member {number} fillOpacity?
+ * @member {boolean} unpackTree?
+ */
 
 
 //Ток Ваня мог так накосячить, что нужно это
@@ -15,14 +25,13 @@ PIXI.FillStyle.prototype.clone = function() {
 	const style = _oldClone.call(this);
 	style.native = false;
 	return style;
-}
+};
 
 PIXI.FillStyle.prototype.reset = function() {
 	_oldReset.call(this);
 	//@ts-ignore
 	this.native = false;
-}
-
+};
 
 /**
  * Scalable Graphics drawn from SVG image document.
@@ -33,12 +42,17 @@ PIXI.FillStyle.prototype.reset = function() {
  */
 export default class SVG extends PIXI.Graphics {
 	/**
-	 * Constructor
+	 * Create Gra[hocs from svg
+	 * @param {SVGElement} svg 
+	 * @param {DefaultOptions} options 
 	 */
-	constructor(svg, unpackTree) {
+	constructor(
+		svg,
+		options = { unpackTree: false, lineColor : 0, lineOpacity : 0, fillColor : 0, fillOpacity : 0, lineWidth : 1 }
+	) {
 		super();
-		this.upacked = unpackTree;
-		//this.fillShapes(svg);
+		this.options = options;
+		//@ts-ignore
 		this.svgChildren(svg.children);
 	}
 
@@ -46,22 +60,20 @@ export default class SVG extends PIXI.Graphics {
 	 * Parse transform attribute
 	 * @private
 	 * @method PIXI.SVG#parseTransform
-	 * @param {SVGCircleElement} node
+	 * @param {SVGElement} node
 	 */
 	svgTransform(node) {
 		if (!node.getAttribute("transform")) return undefined;
 
 		const matrix = new PIXI.Matrix();
-		const transformAttr = node
-			.getAttribute("transform");
+		const transformAttr = node.getAttribute("transform");
 
 		const commands = parseTransform(transformAttr);
 
 		//apply transform matrix right to left
-		for(let key = commands.length - 1; key >= 0; -- key) {
-			
-			let command = commands[ key ].command;
-			let values = commands[ key ].params;
+		for (let key = commands.length - 1; key >= 0; --key) {
+			let command = commands[key].command;
+			let values = commands[key].params;
 
 			if (command === "matrix") {
 				matrix.a = parseScientific(values[0]);
@@ -77,14 +89,11 @@ export default class SVG extends PIXI.Graphics {
 				const dx = parseScientific(values[0]);
 				const dy = parseScientific(values[1]) || 0;
 				matrix.translate(dx, dy);
-
 			} else if (command === "scale") {
 				const sx = parseScientific(values[0]);
 				const sy = values.length > 1 ? parseScientific(values[1]) : sx;
 				matrix.scale(sx, sy);
-
 			} else if (command === "rotate") {
-				
 				let dx = 0;
 				let dy = 0;
 
@@ -95,7 +104,7 @@ export default class SVG extends PIXI.Graphics {
 
 				matrix
 					.translate(-dx, -dy)
-					.rotate(parseScientific(values[0]) * Math.PI / 180)
+					.rotate((parseScientific(values[0]) * Math.PI) / 180)
 					.translate(dx, dy);
 			}
 		}
@@ -116,7 +125,7 @@ export default class SVG extends PIXI.Graphics {
 		for (let i = 0; i < children.length; i++) {
 			const child = children[i];
 
-			const shape = this.upacked ? new SVG(child, this.upacked) : this;
+			const shape = this.options.upacked ? new SVG(child, this.options) : this;
 			const nodeName = child.nodeName.toLowerCase();
 			const nodeStyle = this.svgStyle(child);
 			const matrix = this.svgTransform(child);
@@ -170,7 +179,7 @@ export default class SVG extends PIXI.Graphics {
 				}
 			}
 			shape.svgChildren(child.children, fullStyle, matrix);
-			if (this.upacked) {
+			if (this.options.upacked) {
 				this.addChild(shape);
 			}
 		}
@@ -216,8 +225,8 @@ export default class SVG extends PIXI.Graphics {
 		}
 		const width = parseFloat(node.getAttribute(widthProp));
 		const height = parseFloat(node.getAttribute(heightProp));
-		const cx = node.getAttribute("cx") || 0;
-		const cy = node.getAttribute("cy") || 0;
+		const cx = node.getAttribute("cx") || "0";
+		const cy = node.getAttribute("cy") || "0";
 		let x = 0;
 		let y = 0;
 		if (cx !== null) {
@@ -266,7 +275,7 @@ export default class SVG extends PIXI.Graphics {
 			opacity: node.getAttribute("opacity"),
 			fillOpacity: node.getAttribute("fill-opacity"),
 			stroke: node.getAttribute("stroke"),
-			strokeOpacity : node.getAttribute("stroke-opacity"),
+			strokeOpacity: node.getAttribute("stroke-opacity"),
 			strokeWidth: node.getAttribute("stroke-width")
 		};
 		if (style !== null) {
@@ -325,20 +334,20 @@ export default class SVG extends PIXI.Graphics {
 	 * @private
 	 * @method PIXI.SVG#fillShapes
 	 * @param {SVGElement} node
-	 * @param {} style
+	 * @param {*} style
 	 */
 	fillShapes(node, style) {
 		const { fill, opacity, stroke, strokeWidth, strokeOpacity, fillOpacity } = style;
-		const defaultLineWidth = stroke !== undefined ? 1 : 0;
-		const lineWidth = strokeWidth !== undefined ? Math.max(.5, parseFloat(strokeWidth)) : defaultLineWidth;
-		const lineColor = stroke !== undefined ? this.hexToUint(stroke) : this.lineColor;
-		
-		const strokeOpacityValue = 
-			(opacity !== undefined) ? parseFloat(opacity) : (fillOpacity !== undefined ? parseFloat(strokeOpacity) : 1);
-		
-		const fillOpacityValue = 
-			(opacity !== undefined) ? parseFloat(opacity) : (strokeOpacity !== undefined ? parseFloat(fillOpacity) : 1);
-		
+
+		const defaultLineWidth = stroke !== undefined ? this.options.lineWidth || 1 : 0;
+		const lineWidth = strokeWidth !== undefined ? Math.max(0.5, parseFloat(strokeWidth)) : defaultLineWidth;
+		const lineColor = stroke !== undefined ? this.hexToUint(stroke) : this.options.lineColor;
+
+		const strokeOpacityValue =
+			opacity !== undefined ? parseFloat(opacity) : fillOpacity !== undefined ? parseFloat(strokeOpacity) : 1;
+
+		const fillOpacityValue =
+			opacity !== undefined ? parseFloat(opacity) : strokeOpacity !== undefined ? parseFloat(fillOpacity) : 1;
 
 		const matrix = this.svgTransform(node);
 
@@ -349,12 +358,11 @@ export default class SVG extends PIXI.Graphics {
 				this.beginFill(this.hexToUint(fill), fillOpacityValue);
 			}
 		} else {
-			this.beginFill(0, 1);
+			this.beginFill(0, 0);
 		}
 
 		this.lineStyle(lineWidth, lineColor, strokeOpacityValue);
 		this.setMatrix(matrix);
-	
 
 		// @if DEBUG
 		if (node.getAttribute("stroke-linejoin")) {
@@ -413,7 +421,7 @@ export default class SVG extends PIXI.Graphics {
 				case "Z":
 				case "z": {
 					//jump corete to end
-					if(prevCommand && prevCommand.end){
+					if (prevCommand && prevCommand.end) {
 						this.moveTo(prevCommand.end.x, prevCommand.end.y);
 					}
 					this.closePath();
