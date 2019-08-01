@@ -353,10 +353,12 @@ export default class SVG extends PIXI.Graphics {
     const d = node.getAttribute("d");
     let x = 0,
       y = 0;
-
     const commands = dPathParse(d);
+    let prevCommand = undefined;
+
     for (var i = 0; i < commands.length; i++) {
       const command = commands[i];
+      console.log(command.code, command)
       switch (command.code) {
         case "m": {
           this.moveTo((x += command.end.x), (y += command.end.y));
@@ -395,6 +397,7 @@ export default class SVG extends PIXI.Graphics {
           this.lineTo((x += command.end.x), (y += command.end.y));
           break;
         }
+        case "S":
         case "C": {
           this.bezierCurveTo(
             command.cp1.x,
@@ -406,6 +409,7 @@ export default class SVG extends PIXI.Graphics {
           );
           break;
         }
+        case "s":
         case "c": {
           const currX = x;
           const currY = y;
@@ -419,7 +423,7 @@ export default class SVG extends PIXI.Graphics {
           );
           break;
         }
-        case "s":
+        case "t":
         case "q": {
           const currX = x;
           const currY = y;
@@ -431,18 +435,20 @@ export default class SVG extends PIXI.Graphics {
           );
           break;
         }
-        case "S":
+        case "T":
         case "Q": {
           const currX = x;
           const currY = y;
           this.quadraticCurveTo(
-            currX + command.cp.x,
-            currY + command.cp.y,
+            command.cp.x,
+            command.cp.y,
             (x = command.end.x),
             (y = command.end.y)
           );
           break;
         }
+
+        //arc as bezier
         case "a":
         case "A" : {
           const currX = x;
@@ -469,16 +475,16 @@ export default class SVG extends PIXI.Graphics {
           break;
         }
         default: {
-          // @if DEBUG
           console.info(
             "[SVGUtils] Draw command not supported:",
             command.code,
             command
           );
-          // @endif
-          break;
         }
       }
+
+      //save previous command fro C S and Q
+      prevCommand = command;
     }
   }
 }

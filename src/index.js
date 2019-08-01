@@ -1,7 +1,6 @@
 import { Application } from "pixi.js";
 import * as PIXI from "pixi.js";
-import Svg from "./svg";
-import Svg2 from "./Svg2";
+import Svg from "./svg"
 import {Viewport} from "pixi-viewport";
 
 //import Svg2 from "pixi-vector-graphics";
@@ -20,7 +19,7 @@ app.start();
 
 app.loader.baseUrl ="./data";
 app.loader
-  .add("svg","a-test.svg.txt", {crossOrigin : true})
+  .add("svg","t-test.svg.txt", {crossOrigin : true})
   .load(()=>{
     const t = app.loader.resources["svg"].data;
     const container = document.createElement("div");
