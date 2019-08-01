@@ -12,20 +12,20 @@ const app = new Application({
   antialias: true
 });
 
-//app.stage = new Viewport().drag().pinch().wheel()
-//app.start();
-//PIXI.GraphicsGeometry.BATCHABLE_SIZE = 1000000;
+const c = document.querySelector("#app");
+app.stage = new Viewport().drag().pinch().wheel();
 
 app.loader.baseUrl ="./data";
 app.loader
-  .add("svg","s-test.svg.txt", {crossOrigin : true})
+  .add("svg","map2.svg.txt", {crossOrigin : true})
   .load(()=>{
     const t = app.loader.resources["svg"].data;
     const container = document.createElement("div");
     container.innerHTML = t;
+//    container.style.display = "inline-block";
     const svgE = container.children[0];
     
-    document.body.appendChild(container);
+    c.appendChild(container);
 
     const svgG = new Svg(svgE);
     //const svgGG = new Svg2(svgE);
@@ -37,7 +37,7 @@ app.loader
     app.stage.addChild(svgG)//, svgGG);
     console.log(svgG);
 
-    app.render();
+    //app.render();
   });
 
-document.body.appendChild(app.view);
+c.appendChild(app.view);

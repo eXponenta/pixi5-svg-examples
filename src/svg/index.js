@@ -3,7 +3,27 @@ import * as PIXI from "pixi.js";
 import tcolor from "tinycolor2";
 import { parseScientific, splitAttributeParams, arcToBezier } from "./utils";
 
-let _lastComputedStyle = undefined;
+
+//Ток Ваня мог так накосячить, что нужно это
+//@see https://github.com/pixijs/pixi.js/pull/5981
+//@ts-ignore
+
+const _oldClone = PIXI.FillStyle.prototype.clone;
+const _oldReset = PIXI.FillStyle.prototype.reset;
+
+PIXI.FillStyle.prototype.clone = function() {
+	const style = _oldClone.call(this);
+	style.native = false;
+	return style;
+}
+
+PIXI.FillStyle.prototype.reset = function() {
+	_oldReset.call(this);
+	//@ts-ignore
+	this.native = false;
+}
+
+
 /**
  * Scalable Graphics drawn from SVG image document.
  * @class SVG
@@ -52,6 +72,7 @@ export default class SVG extends PIXI.Graphics {
 			const dx = parseScientific(transformValues[0]);
 			const dy = parseScientific(transformValues[1]);
 
+			console.log("translate", node, dx, dy);
 			matrix.translate(dx, dy);
 		} else if (transformCommand === "scale") {
 			const sx = parseScientific(transformValues[0]);
@@ -80,7 +101,8 @@ export default class SVG extends PIXI.Graphics {
 	 * @private
 	 * @method PIXI.SVG#svgChildren
 	 * @param {Array<*>} children - Collection of SVG nodes
-	 * @param {Boolean} [parentStyle=undefined] Whether to inherit fill settings.
+	 * @param {*} [parentStyle=undefined] Whether to inherit fill settings.
+	 * @param {PIXI.Matrix} [parentMatrix=undefined] Matrix fro transformations
 	 */
 	svgChildren(children, parentStyle, parentMatrix) {
 		for (let i = 0; i < children.length; i++) {
@@ -95,19 +117,20 @@ export default class SVG extends PIXI.Graphics {
 			 * @type {PIXI.Matrix}
 			 */
 			/*
-	  let fullMatrix;
-	  if(matrix) {
-		fullMatrix = matrix;
-		if(parentMatrix) {
-		  fullMatrix.
-		}
-	  }*/
+			let fullMatrix;
+			if(matrix) {
+				fullMatrix = matrix;
+				if(parentMatrix) {
+				fullMatrix.
+				}
+			}*/
 			//compile full style inherited from all parents
 			const fullStyle = Object.assign({}, parentStyle || {}, nodeStyle);
 
 			shape.fillShapes(child, fullStyle);
 			switch (nodeName) {
 				case "path": {
+					//console.log(child.getAttribute("id"), {...fullStyle});
 					shape.svgPath(child);
 					break;
 				}
@@ -125,7 +148,7 @@ export default class SVG extends PIXI.Graphics {
 					break;
 				}
 				case "polyline": {
-					shape.svgPoly(child);
+					shape.svgPoly(child, false);
 					break;
 				}
 				case "g": {
@@ -138,7 +161,7 @@ export default class SVG extends PIXI.Graphics {
 					break;
 				}
 			}
-			shape.svgChildren(child.children, fullStyle);
+			shape.svgChildren(child.children, fullStyle, matrix);
 			if (this.upacked) {
 				this.addChild(shape);
 			}
@@ -297,14 +320,14 @@ export default class SVG extends PIXI.Graphics {
 	fillShapes(node, style) {
 		const { fill, opacity, stroke, strokeWidth } = style;
 		const defaultLineWidth = stroke !== undefined ? 1 : 0;
-		const lineWidth = strokeWidth !== undefined ? Math.max(1, parseFloat(strokeWidth)) : defaultLineWidth;
+		const lineWidth = strokeWidth !== undefined ? Math.max(.5, parseFloat(strokeWidth)) : defaultLineWidth;
 		const lineColor = stroke !== undefined ? this.hexToUint(stroke) : this.lineColor;
 		const opacityValue = opacity !== undefined ? parseFloat(opacity) : 1;
+		
 		const matrix = this.svgTransform(node);
 
-		const rand = (Math.random() * 0xffffff) | 0;
 		if (fill) {
-			if (fill === "none") {
+			if (fill === "none" || fill === "transparent") {
 				this.beginFill(0, 0);
 			} else {
 				this.beginFill(this.hexToUint(fill), 1); //opacityValue);
@@ -313,13 +336,9 @@ export default class SVG extends PIXI.Graphics {
 			this.beginFill(0, 1);
 		}
 
-		this._fillStyle.visible = true;
-
 		this.lineStyle(lineWidth, lineColor, opacityValue);
-
-		if (matrix) {
-			this.setMatrix(matrix);
-		}
+		this.setMatrix(matrix);
+	
 
 		// @if DEBUG
 		if (node.getAttribute("stroke-linejoin")) {
@@ -346,10 +365,9 @@ export default class SVG extends PIXI.Graphics {
 		const commands = dPathParse(d);
 		let prevCommand = undefined;
 
-		for (var i = 0; i < commands.length; i++) 
-		{
+		for (var i = 0; i < commands.length; i++) {
 			const command = commands[i];
-			console.log(command.code, command);
+			//console.log(command.code, command);
 
 			switch (command.code) {
 				case "m": {
@@ -378,6 +396,10 @@ export default class SVG extends PIXI.Graphics {
 				}
 				case "Z":
 				case "z": {
+					//jump corete to end
+					if(prevCommand && prevCommand.end){
+						this.moveTo(prevCommand.end.x, prevCommand.end.y);
+					}
 					this.closePath();
 					break;
 				}
@@ -389,52 +411,94 @@ export default class SVG extends PIXI.Graphics {
 					this.lineTo((x += command.end.x), (y += command.end.y));
 					break;
 				}
-				case "S":
+
+				//short C, selet cp1 from last command
+				case "S": {
+					let cp1 = { x, y };
+					let cp2 = command.cp;
+					//S is compute points from old points
+					if (prevCommand.code == "S" || prevCommand.code == "C") {
+						const lc = prevCommand.cp2 || prevCommand.cp;
+						cp1.x = 2 * prevCommand.end.x - lc.x;
+						cp1.y = 2 * prevCommand.end.y - lc.y;
+					} else {
+						cp1 = cp2;
+					}
+
+					this.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, (x = command.end.x), (y = command.end.y));
+					break;
+				}
 				case "C": {
+					const cp1 = command.cp1;
+					const cp2 = command.cp2;
 
-					let cp1 = command.cp1 || {x, y};
-					let cp2 = command.cp2 || command.cp || {x, y};
-					
-					let prevCp = {x , y}; 
+					this.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, (x = command.end.x), (y = command.end.y));
+					break;
+				}
+				//diff!!
+				//short C, select cp1 from last command
+				case "s": {
+					const currX = x;
+					const currY = y;
 
-					if(prevCommand && command.code === "S" ) {
-						prevCp = (prevCommand.cp || prevCommand.cp2 || prevCommand.end);
-					
-						//T is compute points from old points
-						//this.moveTo(prevCommand.end.x, prevCommand.end.y)
-						if ((prevCommand.code == "S" || prevCommand.code == "C")) {
-							cp1.x = 2 * prevCommand.end.x - prevCp.x;
-							cp1.y = 2 * prevCommand.end.y - prevCp.y;
-						} else {
-							cp1 = cp2;
-						}
+					let cp1 = { x, y };
+					let cp2 = command.cp;
+
+					console.log("p", prevCommand);
+					//S is compute points from old points
+					if (prevCommand.code == "s" || prevCommand.code == "c") {
+						const lc = prevCommand.cp2 || prevCommand.cp;
+						cp1.x = prevCommand.end.x - lc.x;
+						cp1.y = prevCommand.end.y - lc.y;
+					} else {
+						this.quadraticCurveTo(currX + cp2.x, currY + cp2.y, (x += command.end.x), (y += command.end.y));
+						break;
 					}
 
 					this.bezierCurveTo(
-						cp1.x,
-						cp1.y,
-						cp2.x,
-						cp2.y,
-						(x = command.end.x),
-						(y = command.end.y)
-					);
-					break;
-				}
-				case "s":
-				case "c": {
-					const currX = x;
-					const currY = y;
-					this.bezierCurveTo(
-						currX + command.cp1.x,
-						currY + command.cp1.y,
-						currX + command.cp2.x,
-						currY + command.cp2.y,
+						currX + cp1.x,
+						currY + cp1.y,
+						currX + cp2.x,
+						currY + cp2.y,
 						(x += command.end.x),
 						(y += command.end.y)
 					);
 					break;
 				}
-				case "t":
+				case "c": {
+					const currX = x;
+					const currY = y;
+					const cp1 = command.cp1;
+					const cp2 = command.cp2;
+
+					this.bezierCurveTo(
+						currX + cp1.x,
+						currY + cp1.y,
+						currX + cp2.x,
+						currY + cp2.y,
+						(x += command.end.x),
+						(y += command.end.y)
+					);
+					break;
+				}
+				case "t": {
+					let cp = command.cp || { x, y };
+					let prevCp = { x, y };
+
+					if (prevCommand.code != "t" || prevCommand.code != "q") {
+						prevCp = prevCommand.cp || prevCommand.cp2 || prevCommand.end;
+						cp.x = prevCommand.end.x - prevCp.x;
+						cp.y = prevCommand.end.y - prevCp.y;
+					} else {
+						this.lineTo((x += command.end.x), (y += command.end.y));
+						break;
+					}
+
+					const currX = x;
+					const currY = y;
+					this.quadraticCurveTo(currX + cp.x, currY + cp.y, (x += command.end.x), (y += command.end.y));
+					break;
+				}
 				case "q": {
 					const currX = x;
 					const currY = y;
@@ -446,23 +510,25 @@ export default class SVG extends PIXI.Graphics {
 					);
 					break;
 				}
-				case "T":
-				case "Q": {
 
-					let cp = command.cp || {x, y};
-					let prevCp = {x , y}; 
-					if(prevCommand) {
-						prevCp = (prevCommand.cp || prevCommand.cp2 || prevCommand.end);
-					
-						//T is compute points from old points
-						//this.moveTo(prevCommand.end.x, prevCommand.end.y)
-						if (command.code === "T") {
-							cp.x = 2 * prevCommand.end.x - prevCp.x;
-							cp.y = 2 * prevCommand.end.y - prevCp.y;
-						}
+				case "T": {
+					let cp = command.cp || { x, y };
+					let prevCp = { x, y };
+					if (prevCommand.code != "T" || prevCommand.code != "Q") {
+						prevCp = prevCommand.cp || prevCommand.cp2 || prevCommand.end;
+						cp.x = 2 * prevCommand.end.x - prevCp.x;
+						cp.y = 2 * prevCommand.end.y - prevCp.y;
+					} else {
+						this.lineTo((x = command.end.x), (y = command.end.y));
+						break;
 					}
 
-					console.log(cp.x, cp.y)
+					this.quadraticCurveTo(cp.x, cp.y, (x = command.end.x), (y = command.end.y));
+					break;
+				}
+
+				case "Q": {
+					let cp = command.cp;
 					this.quadraticCurveTo(cp.x, cp.y, (x = command.end.x), (y = command.end.y));
 					break;
 				}
@@ -493,7 +559,7 @@ export default class SVG extends PIXI.Graphics {
 					for (let b of beziers) {
 						this.bezierCurveTo(b[2], b[3], b[4], b[5], b[6], b[7]);
 					}
-					console.log(command);
+					//console.log(command);
 					break;
 				}
 				default: {

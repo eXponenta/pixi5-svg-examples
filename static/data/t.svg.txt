@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 900">
+
+ <g id="g4" fill="none" transform="matrix(1.7656463,0,0,1.7656463,324.90716,255.00942)">
+ <g id="g174" stroke-width="2" stroke="#a51926">
+   <path id="path176" d="m28.6,175.2s4.8,4.8,1.2,14.4c0,0-14.4,16-12.4,30" class=""></path>
+  </g>
+  </g>
+</svg>

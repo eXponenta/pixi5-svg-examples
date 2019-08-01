@@ -42801,7 +42801,25 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
 
-var _lastComputedStyle = undefined;
+//Ток Ваня мог так накосячить, что нужно это
+//@see https://github.com/pixijs/pixi.js/pull/5981
+//@ts-ignore
+var _oldClone = PIXI.FillStyle.prototype.clone;
+var _oldReset = PIXI.FillStyle.prototype.reset;
+
+PIXI.FillStyle.prototype.clone = function () {
+  var style = _oldClone.call(this);
+
+  style.native = false;
+  return style;
+};
+
+PIXI.FillStyle.prototype.reset = function () {
+  _oldReset.call(this); //@ts-ignore
+
+
+  this.native = false;
+};
 /**
  * Scalable Graphics drawn from SVG image document.
  * @class SVG
@@ -42809,6 +42827,7 @@ var _lastComputedStyle = undefined;
  * @memberof PIXI
  * @param {SVGSVGElement} svg - SVG Element `<svg>`
  */
+
 
 var SVG =
 /*#__PURE__*/
@@ -42858,6 +42877,7 @@ function (_PIXI$Graphics) {
       } else if (transformCommand === "translate") {
         var dx = (0, _utils.parseScientific)(transformValues[0]);
         var dy = (0, _utils.parseScientific)(transformValues[1]);
+        console.log("translate", node, dx, dy);
         matrix.translate(dx, dy);
       } else if (transformCommand === "scale") {
         var sx = (0, _utils.parseScientific)(transformValues[0]);
@@ -42883,7 +42903,8 @@ function (_PIXI$Graphics) {
      * @private
      * @method PIXI.SVG#svgChildren
      * @param {Array<*>} children - Collection of SVG nodes
-     * @param {Boolean} [parentStyle=undefined] Whether to inherit fill settings.
+     * @param {*} [parentStyle=undefined] Whether to inherit fill settings.
+     * @param {PIXI.Matrix} [parentMatrix=undefined] Matrix fro transformations
      */
 
   }, {
@@ -42902,10 +42923,10 @@ function (_PIXI$Graphics) {
         /*
         let fullMatrix;
         if(matrix) {
-        fullMatrix = matrix;
-        if(parentMatrix) {
-         fullMatrix.
-        }
+        	fullMatrix = matrix;
+        	if(parentMatrix) {
+        	fullMatrix.
+        	}
         }*/
         //compile full style inherited from all parents
 
@@ -42915,6 +42936,7 @@ function (_PIXI$Graphics) {
         switch (nodeName) {
           case "path":
             {
+              //console.log(child.getAttribute("id"), {...fullStyle});
               shape.svgPath(child);
               break;
             }
@@ -42940,7 +42962,7 @@ function (_PIXI$Graphics) {
 
           case "polyline":
             {
-              shape.svgPoly(child);
+              shape.svgPoly(child, false);
               break;
             }
 
@@ -42958,7 +42980,7 @@ function (_PIXI$Graphics) {
             }
         }
 
-        shape.svgChildren(child.children, fullStyle);
+        shape.svgChildren(child.children, fullStyle, matrix);
 
         if (this.upacked) {
           this.addChild(shape);
@@ -43144,14 +43166,13 @@ function (_PIXI$Graphics) {
           stroke = style.stroke,
           strokeWidth = style.strokeWidth;
       var defaultLineWidth = stroke !== undefined ? 1 : 0;
-      var lineWidth = strokeWidth !== undefined ? Math.max(1, parseFloat(strokeWidth)) : defaultLineWidth;
+      var lineWidth = strokeWidth !== undefined ? Math.max(.5, parseFloat(strokeWidth)) : defaultLineWidth;
       var lineColor = stroke !== undefined ? this.hexToUint(stroke) : this.lineColor;
       var opacityValue = opacity !== undefined ? parseFloat(opacity) : 1;
       var matrix = this.svgTransform(node);
-      var rand = Math.random() * 0xffffff | 0;
 
       if (fill) {
-        if (fill === "none") {
+        if (fill === "none" || fill === "transparent") {
           this.beginFill(0, 0);
         } else {
           this.beginFill(this.hexToUint(fill), 1); //opacityValue);
@@ -43160,13 +43181,8 @@ function (_PIXI$Graphics) {
         this.beginFill(0, 1);
       }
 
-      this._fillStyle.visible = true;
       this.lineStyle(lineWidth, lineColor, opacityValue);
-
-      if (matrix) {
-        this.setMatrix(matrix);
-      } // @if DEBUG
-
+      this.setMatrix(matrix); // @if DEBUG
 
       if (node.getAttribute("stroke-linejoin")) {
         console.info('[SVGUtils] "stroke-linejoin" attribute is not supported');
@@ -43197,8 +43213,7 @@ function (_PIXI$Graphics) {
       var prevCommand = undefined;
 
       for (var i = 0; i < commands.length; i++) {
-        var command = commands[i];
-        console.log(command.code, command);
+        var command = commands[i]; //console.log(command.code, command);
 
         switch (command.code) {
           case "m":
@@ -43240,6 +43255,11 @@ function (_PIXI$Graphics) {
           case "Z":
           case "z":
             {
+              //jump corete to end
+              if (prevCommand && prevCommand.end) {
+                this.moveTo(prevCommand.end.x, prevCommand.end.y);
+              }
+
               this.closePath();
               break;
             }
@@ -43255,15 +43275,76 @@ function (_PIXI$Graphics) {
               this.lineTo(x += command.end.x, y += command.end.y);
               break;
             }
+          //short C, selet cp1 from last command
 
           case "S":
-          case "C":
             {
-              var cp1 = command.cp1 || {
+              var cp1 = {
                 x: x,
                 y: y
               };
-              var cp2 = command.cp2 || command.cp || {
+              var cp2 = command.cp; //S is compute points from old points
+
+              if (prevCommand.code == "S" || prevCommand.code == "C") {
+                var lc = prevCommand.cp2 || prevCommand.cp;
+                cp1.x = 2 * prevCommand.end.x - lc.x;
+                cp1.y = 2 * prevCommand.end.y - lc.y;
+              } else {
+                cp1 = cp2;
+              }
+
+              this.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, x = command.end.x, y = command.end.y);
+              break;
+            }
+
+          case "C":
+            {
+              var _cp = command.cp1;
+              var _cp2 = command.cp2;
+              this.bezierCurveTo(_cp.x, _cp.y, _cp2.x, _cp2.y, x = command.end.x, y = command.end.y);
+              break;
+            }
+          //diff!!
+          //short C, select cp1 from last command
+
+          case "s":
+            {
+              var currX = x;
+              var currY = y;
+              var _cp3 = {
+                x: x,
+                y: y
+              };
+              var _cp4 = command.cp;
+              console.log("p", prevCommand); //S is compute points from old points
+
+              if (prevCommand.code == "s" || prevCommand.code == "c") {
+                var _lc = prevCommand.cp2 || prevCommand.cp;
+
+                _cp3.x = prevCommand.end.x - _lc.x;
+                _cp3.y = prevCommand.end.y - _lc.y;
+              } else {
+                this.quadraticCurveTo(currX + _cp4.x, currY + _cp4.y, x += command.end.x, y += command.end.y);
+                break;
+              }
+
+              this.bezierCurveTo(currX + _cp3.x, currY + _cp3.y, currX + _cp4.x, currY + _cp4.y, x += command.end.x, y += command.end.y);
+              break;
+            }
+
+          case "c":
+            {
+              var _currX = x;
+              var _currY = y;
+              var _cp5 = command.cp1;
+              var _cp6 = command.cp2;
+              this.bezierCurveTo(_currX + _cp5.x, _currY + _cp5.y, _currX + _cp6.x, _currY + _cp6.y, x += command.end.x, y += command.end.y);
+              break;
+            }
+
+          case "t":
+            {
+              var cp = command.cp || {
                 x: x,
                 y: y
               };
@@ -43272,64 +43353,58 @@ function (_PIXI$Graphics) {
                 y: y
               };
 
-              if (prevCommand && command.code === "S") {
-                prevCp = prevCommand.cp || prevCommand.cp2 || prevCommand.end; //T is compute points from old points
-                //this.moveTo(prevCommand.end.x, prevCommand.end.y)
-
-                if (prevCommand.code == "S" || prevCommand.code == "C") {
-                  cp1.x = 2 * prevCommand.end.x - prevCp.x;
-                  cp1.y = 2 * prevCommand.end.y - prevCp.y;
-                } else {
-                  cp1 = cp2;
-                }
+              if (prevCommand.code != "t" || prevCommand.code != "q") {
+                prevCp = prevCommand.cp || prevCommand.cp2 || prevCommand.end;
+                cp.x = prevCommand.end.x - prevCp.x;
+                cp.y = prevCommand.end.y - prevCp.y;
+              } else {
+                this.lineTo(x += command.end.x, y += command.end.y);
+                break;
               }
 
-              this.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, x = command.end.x, y = command.end.y);
+              var _currX2 = x;
+              var _currY2 = y;
+              this.quadraticCurveTo(_currX2 + cp.x, _currY2 + cp.y, x += command.end.x, y += command.end.y);
               break;
             }
 
-          case "s":
-          case "c":
-            {
-              var currX = x;
-              var currY = y;
-              this.bezierCurveTo(currX + command.cp1.x, currY + command.cp1.y, currX + command.cp2.x, currY + command.cp2.y, x += command.end.x, y += command.end.y);
-              break;
-            }
-
-          case "t":
           case "q":
             {
-              var _currX = x;
-              var _currY = y;
-              this.quadraticCurveTo(_currX + command.cp.x, _currY + command.cp.y, x += command.end.x, y += command.end.y);
+              var _currX3 = x;
+              var _currY3 = y;
+              this.quadraticCurveTo(_currX3 + command.cp.x, _currY3 + command.cp.y, x += command.end.x, y += command.end.y);
               break;
             }
 
           case "T":
-          case "Q":
             {
-              var cp = command.cp || {
+              var _cp7 = command.cp || {
                 x: x,
                 y: y
               };
+
               var _prevCp = {
                 x: x,
                 y: y
               };
 
-              if (prevCommand) {
-                _prevCp = prevCommand.cp || prevCommand.cp2 || prevCommand.end; //T is compute points from old points
-                //this.moveTo(prevCommand.end.x, prevCommand.end.y)
-
-                if (command.code === "T") {
-                  cp.x = 2 * prevCommand.end.x - _prevCp.x;
-                  cp.y = 2 * prevCommand.end.y - _prevCp.y;
-                }
+              if (prevCommand.code != "T" || prevCommand.code != "Q") {
+                _prevCp = prevCommand.cp || prevCommand.cp2 || prevCommand.end;
+                _cp7.x = 2 * prevCommand.end.x - _prevCp.x;
+                _cp7.y = 2 * prevCommand.end.y - _prevCp.y;
+              } else {
+                this.lineTo(x = command.end.x, y = command.end.y);
+                break;
               }
 
-              console.log(cp.x, cp.y);
-              this.quadraticCurveTo(cp.x, cp.y, x = command.end.x, y = command.end.y);
+              this.quadraticCurveTo(_cp7.x, _cp7.y, x = command.end.x, y = command.end.y);
+              break;
+            }
+
+          case "Q":
+            {
+              var _cp8 = command.cp;
+              this.quadraticCurveTo(_cp8.x, _cp8.y, x = command.end.x, y = command.end.y);
               break;
             }
           //arc as bezier
@@ -43337,8 +43412,8 @@ function (_PIXI$Graphics) {
           case "a":
           case "A":
             {
-              var _currX2 = x;
-              var _currY2 = y;
+              var _currX4 = x;
+              var _currY4 = y;
 
               if (command.relative) {
                 x += command.end.x;
@@ -43349,8 +43424,8 @@ function (_PIXI$Graphics) {
               }
 
               var beziers = (0, _utils.arcToBezier)({
-                x1: _currX2,
-                y1: _currY2,
+                x1: _currX4,
+                y1: _currY4,
                 rx: command.radii.x,
                 ry: command.radii.y,
                 x2: x,
@@ -43367,7 +43442,8 @@ function (_PIXI$Graphics) {
                 for (var _iterator = beziers[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
                   var b = _step.value;
                   this.bezierCurveTo(b[2], b[3], b[4], b[5], b[6], b[7]);
-                }
+                } //console.log(command);
+
               } catch (err) {
                 _didIteratorError = true;
                 _iteratorError = err;
@@ -43383,7 +43459,6 @@ function (_PIXI$Graphics) {
                 }
               }
 
-              console.log(command);
               break;
             }
 
@@ -47190,19 +47265,19 @@ var app = new PIXI.Application({
   height: window.innerHeight / 2,
   backgroundColor: 0xffffff,
   antialias: true
-}); //app.stage = new Viewport().drag().pinch().wheel()
-//app.start();
-//PIXI.GraphicsGeometry.BATCHABLE_SIZE = 1000000;
-
+});
+var c = document.querySelector("#app");
+app.stage = new _pixiViewport.Viewport().drag().pinch().wheel();
 app.loader.baseUrl = "./data";
-app.loader.add("svg", "s-test.svg.txt", {
+app.loader.add("svg", "map2.svg.txt", {
   crossOrigin: true
 }).load(function () {
   var t = app.loader.resources["svg"].data;
   var container = document.createElement("div");
-  container.innerHTML = t;
+  container.innerHTML = t; //    container.style.display = "inline-block";
+
   var svgE = container.children[0];
-  document.body.appendChild(container);
+  c.appendChild(container);
   var svgG = new _svg.default(svgE); //const svgGG = new Svg2(svgE);
   //svgGG.scale.set(.75);
   //svgG.scale.set(5);
@@ -47210,10 +47285,9 @@ app.loader.add("svg", "s-test.svg.txt", {
 
   app.stage.addChild(svgG); //, svgGG);
 
-  console.log(svgG);
-  app.render();
+  console.log(svgG); //app.render();
 });
-document.body.appendChild(app.view);
+c.appendChild(app.view);
 },{"pixi.js":"node_modules/pixi.js/lib/pixi.es.js","./svg":"src/svg/index.js","pixi-viewport":"node_modules/pixi-viewport/dist/viewport.es.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
