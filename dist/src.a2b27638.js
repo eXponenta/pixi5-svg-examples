@@ -42824,11 +42824,11 @@ function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || func
 
 /**
  * @typedef {Object} DefaultOptions
- * @member {number} lineWidth?
- * @member {number} lineColor?
- * @member {number} lineOpacity?
- * @member {number} fillColor?
- * @member {number} fillOpacity?
+ * @property {number} lineWidth?
+ * @property {number} lineColor?
+ * @property {number} lineOpacity?
+ * @property {number} fillColor?
+ * @property {number} fillOpacity?
  * @member {boolean} unpackTree?
  */
 //Ток Ваня мог так накосячить, что нужно это
@@ -42850,6 +42850,53 @@ PIXI.FillStyle.prototype.reset = function () {
 
   this.native = false;
 };
+
+var tmpPoint = new PIXI.Point();
+
+PIXI.GraphicsGeometry.prototype.containsPoint = function (point) {
+  var graphicsData = this.graphicsData;
+
+  for (var i = 0; i < graphicsData.length; ++i) {
+    var data = graphicsData[i];
+    tmpPoint.copyFrom(point);
+
+    if (!data.fillStyle.visible) {
+      continue;
+    } // only deal with fills..
+
+
+    if (data.shape) {
+      if (data.matrix) {
+        data.matrix.applyInverse(point, tmpPoint);
+      }
+
+      if (data.shape.contains(tmpPoint.x, tmpPoint.y)) {
+        if (data.holes) {
+          for (var _i = 0; _i < data.holes.length; _i++) {
+            var hole = data.holes[_i];
+
+            if (hole.shape.contains(tmpPoint.x, tmpPoint.y)) {
+              return false;
+            }
+          }
+        }
+
+        return true;
+      }
+    }
+  }
+
+  return false;
+};
+
+var DEFAULT = {
+  unpackTree: false,
+  lineColor: 0,
+  lineOpacity: 0,
+  fillColor: 0,
+  fillOpacity: 0,
+  lineWidth: 1
+};
 /**
  * Scalable Graphics drawn from SVG image document.
  * @class SVG
@@ -42857,7 +42904,6 @@ PIXI.FillStyle.prototype.reset = function () {
  * @memberof PIXI
  * @param {SVGSVGElement} svg - SVG Element `<svg>`
  */
-
 
 var SVG =
 /*#__PURE__*/
@@ -42872,22 +42918,16 @@ function (_PIXI$Graphics) {
   function SVG(svg) {
     var _this;
 
-    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {
-      unpackTree: false,
-      lineColor: 0,
-      lineOpacity: 0,
-      fillColor: 0,
-      fillOpacity: 0,
-      lineWidth: 1
-    };
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : DEFAULT;
 
     _classCallCheck(this, SVG);
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(SVG).call(this));
-    _this.options = options; //@ts-ignore
+    _this.options = Object.assign({}, DEFAULT, options || {}); //@ts-ignore
 
     _this.svgChildren(svg.children);
 
+    _this.type = "";
     return _this;
   }
   /**
@@ -42910,36 +42950,55 @@ function (_PIXI$Graphics) {
         var command = commands[key].command;
         var values = commands[key].params;
 
-        if (command === "matrix") {
-          matrix.a = (0, _utils.parseScientific)(values[0]);
-          matrix.b = (0, _utils.parseScientific)(values[1]);
-          matrix.c = (0, _utils.parseScientific)(values[2]);
-          matrix.d = (0, _utils.parseScientific)(values[3]);
-          matrix.tx = (0, _utils.parseScientific)(values[4]);
-          matrix.ty = (0, _utils.parseScientific)(values[5]);
-          return matrix; //graphics.transform.localTransform = transformMatrix;
-        } else if (command === "translate") {
-          var dx = (0, _utils.parseScientific)(values[0]);
-          var dy = (0, _utils.parseScientific)(values[1]) || 0;
-          matrix.translate(dx, dy);
-        } else if (command === "scale") {
-          var sx = (0, _utils.parseScientific)(values[0]);
-          var sy = values.length > 1 ? (0, _utils.parseScientific)(values[1]) : sx;
-          matrix.scale(sx, sy);
-        } else if (command === "rotate") {
-          var _dx = 0;
-          var _dy = 0;
+        switch (command) {
+          case "matrix":
+            {
+              matrix.a = (0, _utils.parseScientific)(values[0]);
+              matrix.b = (0, _utils.parseScientific)(values[1]);
+              matrix.c = (0, _utils.parseScientific)(values[2]);
+              matrix.d = (0, _utils.parseScientific)(values[3]);
+              matrix.tx = (0, _utils.parseScientific)(values[4]);
+              matrix.ty = (0, _utils.parseScientific)(values[5]);
+              return matrix;
+            }
 
-          if (values.length > 1) {
-            _dx = (0, _utils.parseScientific)(values[1]);
-            _dy = (0, _utils.parseScientific)(values[2]);
-          }
+          case "translate":
+            {
+              var dx = (0, _utils.parseScientific)(values[0]);
+              var dy = (0, _utils.parseScientific)(values[1]) || 0;
+              matrix.translate(dx, dy);
+              break;
+            }
 
-          matrix.translate(-_dx, -_dy).rotate((0, _utils.parseScientific)(values[0]) * Math.PI / 180).translate(_dx, _dy);
+          case "scale":
+            {
+              var sx = (0, _utils.parseScientific)(values[0]);
+              var sy = values.length > 1 ? (0, _utils.parseScientific)(values[1]) : sx;
+              matrix.scale(sx, sy);
+              break;
+            }
+
+          case "rotate":
+            {
+              var _dx = 0;
+              var _dy = 0;
+
+              if (values.length > 1) {
+                _dx = (0, _utils.parseScientific)(values[1]);
+                _dy = (0, _utils.parseScientific)(values[2]);
+              }
+
+              matrix.translate(-_dx, -_dy).rotate((0, _utils.parseScientific)(values[0]) * Math.PI / 180).translate(_dx, _dy);
+              break;
+            }
+
+          default:
+            {
+              console.log("Command ".concat(command, " can't implement yet"));
+            }
         }
       }
 
-      console.log(matrix);
       return matrix;
     }
     /**
@@ -42956,7 +43015,7 @@ function (_PIXI$Graphics) {
     value: function svgChildren(children, parentStyle, parentMatrix) {
       for (var i = 0; i < children.length; i++) {
         var child = children[i];
-        var shape = this.options.upacked ? new SVG(child, this.options) : this;
+        var shape = this.options.unpackTree ? new SVG(child, this.options) : this;
         var nodeName = child.nodeName.toLowerCase();
         var nodeStyle = this.svgStyle(child);
         var matrix = this.svgTransform(child);
@@ -43026,7 +43085,9 @@ function (_PIXI$Graphics) {
 
         shape.svgChildren(child.children, fullStyle, matrix);
 
-        if (this.options.upacked) {
+        if (this.options.unpackTree) {
+          shape.name = child.getAttribute("id") || "child_" + i;
+          shape.type = nodeName;
           this.addChild(shape);
         }
       }
@@ -43160,20 +43221,6 @@ function (_PIXI$Graphics) {
           delete result[key];
         }
       }
-      /*
-      if(!result.stroke || !result.fill) {
-       const computed =  window.getComputedStyle(node);
-       //console.log(computed);
-       result.stroke = computed.getPropertyValue("stroke");
-       result.fill = computed.getPropertyValue("fill");
-       if(!result.stroke)
-      result.stroke = null;
-       if(!result.fill)
-      result.fill = null;
-       
-       console.log(result);
-      }*/
-
 
       return result;
     }
@@ -43227,7 +43274,7 @@ function (_PIXI$Graphics) {
           this.beginFill(this.hexToUint(fill), fillOpacityValue);
         }
       } else {
-        this.beginFill(0, 0);
+        this.beginFill(this.options.fillColor, 1);
       }
 
       this.lineStyle(lineWidth, lineColor, strokeOpacityValue);
@@ -43364,8 +43411,7 @@ function (_PIXI$Graphics) {
                 x: x,
                 y: y
               };
-              var _cp4 = command.cp;
-              console.log("p", prevCommand); //S is compute points from old points
+              var _cp4 = command.cp; //S is compute points from old points
 
               if (prevCommand.code == "s" || prevCommand.code == "c") {
                 var _lc = prevCommand.cp2 || prevCommand.cp;
@@ -47304,38 +47350,82 @@ var _svg = _interopRequireDefault(require("./svg"));
 
 var _pixiViewport = require("pixi-viewport");
 
+var _this = void 0;
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
+function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+
+function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
+
+function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
+
+function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
+
 //import Svg2 from "pixi-vector-graphics";
 var app = new PIXI.Application({
   width: window.innerWidth,
-  height: window.innerHeight / 2,
+  height: window.innerHeight,
   backgroundColor: 0xffffff,
   antialias: true
 });
 var c = document.querySelector("#app");
 app.stage = new _pixiViewport.Viewport().drag().pinch().wheel();
 app.loader.baseUrl = "./data";
-app.loader.add("svg", "rotate-test.svg.txt", {
+app.loader.add("svg", "map2.svg.txt", {
   crossOrigin: true
 }).load(function () {
   var t = app.loader.resources["svg"].data;
   var container = document.createElement("div");
   container.innerHTML = t; //    container.style.display = "inline-block";
 
-  var svgE = container.children[0];
-  c.appendChild(container);
-  var svgG = new _svg.default(svgE); //const svgGG = new Svg2(svgE);
-  //svgGG.scale.set(.75);
-  //svgG.scale.set(5);
-  //svgG.position.set(  150, 150);
+  var svgE = container.children[0]; //c.appendChild(container);
 
-  app.stage.addChild(svgG); //, svgGG);
+  var svgG = new _svg.default(svgE, {
+    unpackTree: true,
+    fillColor: 0x00ff00
+  });
+  console.log(svgG);
 
-  console.log(svgG); //app.render();
+  var objs = _toConsumableArray(svgG.children);
+
+  var index = 0;
+
+  while (objs[++index]) {
+    var e = objs[index];
+
+    if (e.type !== "g") {
+      e.interactive = true;
+      e.buttonMode = true;
+      e.on("pointerover", onHoverUp, _this);
+      e.on("pointerout", onHowerDown, _this);
+    } else {
+      objs.push.apply(objs, _toConsumableArray(e.children));
+    }
+  }
+
+  app.stage.addChild(svgG);
 });
+var _last = undefined;
+
+function onHoverUp(event) {
+  if (_last) {
+    _last.tint = 0xffffff;
+  }
+
+  setTimeout(function () {
+    event.target.tint = 0xff0000;
+    _last = event.target;
+  }, 0);
+}
+
+function onHowerDown(event) {
+  if (_last) _last.tint = 0xffffff;
+  _last = undefined;
+}
+
 c.appendChild(app.view);
 },{"pixi.js":"node_modules/pixi.js/lib/pixi.es.js","./svg":"src/svg/index.js","pixi-viewport":"node_modules/pixi-viewport/dist/viewport.es.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];

@@ -1,10 +1,4 @@
-<svg width="180" height="200"
-  xmlns="http://www.w3.org/2000/svg" 
-  xmlns:xlink="http://www.w3.org/1999/xlink">
-
-  <!-- Это элемент до применения переноса и поворота -->
-  <rect x="50" y="50" stroke-width="2" height="100" width="100" style="stroke:#000; fill: #0086B2" fill-opacity=0.5 stroke-opacity=0.8></rect>
-
-  <!-- Здесь мы добавим текстовый элемент, повернем и перенесем оба элемента -->
-  <rect x="50" y="50" height="100" width="100" style="stroke:#000; fill: #0086B2" transform="translate(30) rotate(45 50 50)"></rect>
+<svg width="240" height="280" version="1.1" xmlns="http://www.w3.org/2000/svg" style="border-style:solid;">
+   <rect x="10" y="10" width="80" height="80" stroke="#000" fill="red" transform="skewX(45)" />
+   <rect x="10" y="100" width="80" height="80" stroke="#000" fill="green" transform="skewY(45)" />
 </svg>

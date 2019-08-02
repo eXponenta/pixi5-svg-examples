@@ -5,11 +5,11 @@ import { parseScientific, arcToBezier, parseTransform } from "./utils";
 
 /**
  * @typedef {Object} DefaultOptions
- * @member {number} lineWidth?
- * @member {number} lineColor?
- * @member {number} lineOpacity?
- * @member {number} fillColor?
- * @member {number} fillOpacity?
+ * @property {number} lineWidth?
+ * @property {number} lineColor?
+ * @property {number} lineOpacity?
+ * @property {number} fillColor?
+ * @property {number} fillOpacity?
  * @member {boolean} unpackTree?
  */
 
@@ -33,6 +33,57 @@ PIXI.FillStyle.prototype.reset = function() {
 	this.native = false;
 };
 
+const tmpPoint = new PIXI.Point();
+PIXI.GraphicsGeometry.prototype.containsPoint = function(point)
+{
+    const graphicsData = this.graphicsData;
+    
+    for (let i = 0; i < graphicsData.length; ++i)
+    {
+        const data = graphicsData[i];
+        tmpPoint.copyFrom(point);
+
+        if (!data.fillStyle.visible)
+        {
+            continue;
+        }
+
+        // only deal with fills..
+        if (data.shape)
+        {
+            if(data.matrix)
+            {
+                data.matrix.applyInverse(point, tmpPoint);
+            }
+
+            if (data.shape.contains(tmpPoint.x, tmpPoint.y))
+            {
+                if (data.holes)
+                {
+                    for (let i = 0; i < data.holes.length; i++)
+                    {
+                        const hole = data.holes[i];
+
+                        if (hole.shape.contains(tmpPoint.x, tmpPoint.y))
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
+
+const DEFAULT = {
+	unpackTree: false, lineColor : 0, lineOpacity : 0, fillColor : 0, fillOpacity : 0, lineWidth : 1
+};
 /**
  * Scalable Graphics drawn from SVG image document.
  * @class SVG
@@ -48,12 +99,13 @@ export default class SVG extends PIXI.Graphics {
 	 */
 	constructor(
 		svg,
-		options = { unpackTree: false, lineColor : 0, lineOpacity : 0, fillColor : 0, fillOpacity : 0, lineWidth : 1 }
+		options = DEFAULT
 	) {
 		super();
-		this.options = options;
+		this.options = Object.assign({}, DEFAULT, options || {});
 		//@ts-ignore
 		this.svgChildren(svg.children);
+		this.type = "";
 	}
 
 	/**
@@ -75,41 +127,51 @@ export default class SVG extends PIXI.Graphics {
 			let command = commands[key].command;
 			let values = commands[key].params;
 
-			if (command === "matrix") {
-				matrix.a = parseScientific(values[0]);
-				matrix.b = parseScientific(values[1]);
-				matrix.c = parseScientific(values[2]);
-				matrix.d = parseScientific(values[3]);
-				matrix.tx = parseScientific(values[4]);
-				matrix.ty = parseScientific(values[5]);
+			switch(command){
+				case "matrix" : {
+					matrix.a = parseScientific(values[0]);
+					matrix.b = parseScientific(values[1]);
+					matrix.c = parseScientific(values[2]);
+					matrix.d = parseScientific(values[3]);
+					matrix.tx = parseScientific(values[4]);
+					matrix.ty = parseScientific(values[5]);
 
-				return matrix;
-				//graphics.transform.localTransform = transformMatrix;
-			} else if (command === "translate") {
-				const dx = parseScientific(values[0]);
-				const dy = parseScientific(values[1]) || 0;
-				matrix.translate(dx, dy);
-			} else if (command === "scale") {
-				const sx = parseScientific(values[0]);
-				const sy = values.length > 1 ? parseScientific(values[1]) : sx;
-				matrix.scale(sx, sy);
-			} else if (command === "rotate") {
-				let dx = 0;
-				let dy = 0;
-
-				if (values.length > 1) {
-					dx = parseScientific(values[1]);
-					dy = parseScientific(values[2]);
+					return matrix;
 				}
+				case "translate" : {
+					const dx = parseScientific(values[0]);
+					const dy = parseScientific(values[1]) || 0;
+					matrix.translate(dx, dy);
+					break;
+				} 
+				case "scale" : {
+					const sx = parseScientific(values[0]);
+					const sy = values.length > 1 ? parseScientific(values[1]) : sx;
+					matrix.scale(sx, sy);
+					break;
+				}
+				case "rotate" : {
+					let dx = 0;
+					let dy = 0;
 
-				matrix
-					.translate(-dx, -dy)
-					.rotate((parseScientific(values[0]) * Math.PI) / 180)
-					.translate(dx, dy);
+					if (values.length > 1) {
+						dx = parseScientific(values[1]);
+						dy = parseScientific(values[2]);
+					}
+
+					matrix
+						.translate(-dx, -dy)
+						.rotate((parseScientific(values[0]) * Math.PI) / 180)
+						.translate(dx, dy);
+					
+					break;
+				}
+				default : {
+					console.log(`Command ${command} can't implement yet`);
+				}
 			}
 		}
 
-		console.log(matrix);
 		return matrix;
 	}
 
@@ -123,9 +185,10 @@ export default class SVG extends PIXI.Graphics {
 	 */
 	svgChildren(children, parentStyle, parentMatrix) {
 		for (let i = 0; i < children.length; i++) {
+			
 			const child = children[i];
-
-			const shape = this.options.upacked ? new SVG(child, this.options) : this;
+			const shape = this.options.unpackTree ? new SVG(child, this.options) : this;
+			
 			const nodeName = child.nodeName.toLowerCase();
 			const nodeStyle = this.svgStyle(child);
 			const matrix = this.svgTransform(child);
@@ -145,6 +208,7 @@ export default class SVG extends PIXI.Graphics {
 			const fullStyle = Object.assign({}, parentStyle || {}, nodeStyle);
 
 			shape.fillShapes(child, fullStyle);
+
 			switch (nodeName) {
 				case "path": {
 					//console.log(child.getAttribute("id"), {...fullStyle});
@@ -178,8 +242,11 @@ export default class SVG extends PIXI.Graphics {
 					break;
 				}
 			}
+
 			shape.svgChildren(child.children, fullStyle, matrix);
-			if (this.options.upacked) {
+			if (this.options.unpackTree) {
+				shape.name = child.getAttribute("id") || "child_" + i;
+				shape.type = nodeName;
 				this.addChild(shape);
 			}
 		}
@@ -277,7 +344,7 @@ export default class SVG extends PIXI.Graphics {
 			stroke: node.getAttribute("stroke"),
 			strokeOpacity: node.getAttribute("stroke-opacity"),
 			strokeWidth: node.getAttribute("stroke-width")
-		};
+		}
 		if (style !== null) {
 			style.split(";").forEach(prop => {
 				const [name, value] = prop.split(":");
@@ -294,19 +361,6 @@ export default class SVG extends PIXI.Graphics {
 				delete result[key];
 			}
 		}
-		/*
-	if(!result.stroke || !result.fill) {
-	  const computed =  window.getComputedStyle(node);
-	  //console.log(computed);
-	  result.stroke = computed.getPropertyValue("stroke");
-	  result.fill = computed.getPropertyValue("fill");
-	  if(!result.stroke)
-		result.stroke = null;
-	  if(!result.fill)
-		result.fill = null;
-	  
-	  console.log(result);
-	}*/
 		return result;
 	}
 
@@ -358,7 +412,7 @@ export default class SVG extends PIXI.Graphics {
 				this.beginFill(this.hexToUint(fill), fillOpacityValue);
 			}
 		} else {
-			this.beginFill(0, 0);
+			this.beginFill(this.options.fillColor, 1);
 		}
 
 		this.lineStyle(lineWidth, lineColor, strokeOpacityValue);
@@ -468,7 +522,6 @@ export default class SVG extends PIXI.Graphics {
 					let cp1 = { x, y };
 					let cp2 = command.cp;
 
-					console.log("p", prevCommand);
 					//S is compute points from old points
 					if (prevCommand.code == "s" || prevCommand.code == "c") {
 						const lc = prevCommand.cp2 || prevCommand.cp;
