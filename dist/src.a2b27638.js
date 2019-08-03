@@ -42912,7 +42912,7 @@ function (_PIXI$Graphics) {
 
   /**
    * Create Gra[hocs from svg
-   * @param {SVGElement} svg 
+   * @param {SVGElement | string} svg 
    * @param {DefaultOptions} options 
    */
   function SVG(svg) {
@@ -42923,7 +42923,19 @@ function (_PIXI$Graphics) {
     _classCallCheck(this, SVG);
 
     _this = _possibleConstructorReturn(this, _getPrototypeOf(SVG).call(this));
-    _this.options = Object.assign({}, DEFAULT, options || {}); //@ts-ignore
+    _this.options = Object.assign({}, DEFAULT, options || {});
+
+    if (!(svg instanceof SVGElement)) {
+      var container = document.createElement("div");
+      container.innerHTML = svg; //@ts-ignore
+
+      svg = container.children[0];
+
+      if (!(svg instanceof SVGElement)) {
+        throw new Error("invalid SVG!");
+      }
+    } //@ts-ignore
+
 
     _this.svgChildren(svg.children);
 
@@ -43307,20 +43319,23 @@ function (_PIXI$Graphics) {
           y = 0;
       var commands = (0, _dPathParser.default)(d);
       var prevCommand = undefined;
+      var combiner = "";
 
       for (var i = 0; i < commands.length; i++) {
-        var command = commands[i]; //console.log(command.code, command);
+        var command = commands[i];
 
         switch (command.code) {
           case "m":
             {
               this.moveTo(x += command.end.x, y += command.end.y);
+              combiner += ".moveTo(".concat(x, ", ").concat(y, ")");
               break;
             }
 
           case "M":
             {
               this.moveTo(x = command.end.x, y = command.end.y);
+              combiner += ".moveTo(".concat(x, ", ").concat(y, ")");
               break;
             }
 
@@ -43352,11 +43367,9 @@ function (_PIXI$Graphics) {
           case "z":
             {
               //jump corete to end
-              if (prevCommand && prevCommand.end) {
-                this.moveTo(prevCommand.end.x, prevCommand.end.y);
-              }
+              this.closePath(); //this.endFill();
 
-              this.closePath();
+              combiner += ".closePath()";
               break;
             }
 
@@ -43390,6 +43403,7 @@ function (_PIXI$Graphics) {
               }
 
               this.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, x = command.end.x, y = command.end.y);
+              combiner += "bezierCurveTo(".concat(cp1.x, ", ").concat(cp1.y, ", ").concat(cp2.x, ", ").concat(cp2.y, ",").concat(x, ", ").concat(y, ")");
               break;
             }
 
@@ -43420,10 +43434,12 @@ function (_PIXI$Graphics) {
                 _cp3.y = prevCommand.end.y - _lc.y;
               } else {
                 this.quadraticCurveTo(currX + _cp4.x, currY + _cp4.y, x += command.end.x, y += command.end.y);
+                combiner += ".quadraticCurveTo(".concat(currX + _cp4.x, ", ").concat(currY + _cp4.y, ", ").concat(x, ", ").concat(y, ")");
                 break;
               }
 
               this.bezierCurveTo(currX + _cp3.x, currY + _cp3.y, currX + _cp4.x, currY + _cp4.y, x += command.end.x, y += command.end.y);
+              combiner += ".bezierCurveTo(".concat(currX + _cp3.x, ", ").concat(currY + _cp3.y, ", ").concat(currX + _cp4.x, ", ").concat(currY + _cp4.y, ",").concat(x, ", ").concat(y, ")");
               break;
             }
 
@@ -43434,6 +43450,7 @@ function (_PIXI$Graphics) {
               var _cp5 = command.cp1;
               var _cp6 = command.cp2;
               this.bezierCurveTo(_currX + _cp5.x, _currY + _cp5.y, _currX + _cp6.x, _currY + _cp6.y, x += command.end.x, y += command.end.y);
+              combiner += ".bezierCurveTo(".concat(_currX + _cp5.x, ", ").concat(_currY + _cp5.y, ", ").concat(_currX + _cp6.x, ", ").concat(_currY + _cp6.y, ",").concat(x, ", ").concat(y, ")");
               break;
             }
 
@@ -43460,6 +43477,7 @@ function (_PIXI$Graphics) {
               var _currX2 = x;
               var _currY2 = y;
               this.quadraticCurveTo(_currX2 + cp.x, _currY2 + cp.y, x += command.end.x, y += command.end.y);
+              combiner += "quadraticCurveTo(".concat(_currX2 + cp.x, ", ").concat(_currY2 + cp.y, ",").concat(x, ", ").concat(y, ")");
               break;
             }
 
@@ -43561,11 +43579,17 @@ function (_PIXI$Graphics) {
             {
               console.info("[SVGUtils] Draw command not supported:", command.code, command);
             }
-        } //save previous command fro C S and Q
+        }
 
+        console.log(command.code, command, {
+          x: x,
+          y: y
+        }); //save previous command fro C S and Q
 
         prevCommand = command;
       }
+
+      console.log("combiner : ", combiner);
     }
   }]);
 
@@ -47350,21 +47374,12 @@ var _svg = _interopRequireDefault(require("./svg"));
 
 var _pixiViewport = require("pixi-viewport");
 
-var _this = void 0;
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) { var desc = Object.defineProperty && Object.getOwnPropertyDescriptor ? Object.getOwnPropertyDescriptor(obj, key) : {}; if (desc.get || desc.set) { Object.defineProperty(newObj, key, desc); } else { newObj[key] = obj[key]; } } } } newObj.default = obj; return newObj; } }
 
-function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread(); }
+window.PIXI = PIXI; //GraphicsGeometry.BATCHABLE_SIZE = 100000;
 
-function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance"); }
-
-function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter); }
-
-function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
-
-//import Svg2 from "pixi-vector-graphics";
 var app = new PIXI.Application({
   width: window.innerWidth,
   height: window.innerHeight,
@@ -47374,39 +47389,35 @@ var app = new PIXI.Application({
 var c = document.querySelector("#app");
 app.stage = new _pixiViewport.Viewport().drag().pinch().wheel();
 app.loader.baseUrl = "./data";
-app.loader.add("svg", "map2.svg.txt", {
-  crossOrigin: true
-}).load(function () {
-  var t = app.loader.resources["svg"].data;
-  var container = document.createElement("div");
-  container.innerHTML = t; //    container.style.display = "inline-block";
+app.loader //.add("svg", "map2.svg.txt")
+.add("tiger", "m-test.svg.txt").load(function () {
+  //const map = app.loader.resources["svg"].data;
+  var tiger = app.loader.resources["tiger"].data; //c.appendChild(container);
+  //const svgMapObject = new Svg(svgMap, { unpackTree: false});
 
-  var svgE = container.children[0]; //c.appendChild(container);
-
-  var svgG = new _svg.default(svgE, {
-    unpackTree: true,
-    fillColor: 0x00ff00
+  var svgTigerObject = new _svg.default(tiger, {
+    unpackTree: false,
+    fillColor: "red"
   });
-  console.log(svgG);
+  /*
+  	console.log(svgMapObject);
+  	let objs = [...svgMapObject.children];
+  	let index = 0;
+  
+  	while (objs[++index]) {
+  		let e = objs[index];
+  		if (e.type !== "g") {
+  			e.interactive = true;
+  			e.buttonMode = true;
+  			e.on("pointerover", onHoverUp, this);
+  			e.on("pointerout", onHowerDown, this);
+  		} else {
+  			objs.push(...e.children);
+  		}
+  	}
+  	*/
 
-  var objs = _toConsumableArray(svgG.children);
-
-  var index = 0;
-
-  while (objs[++index]) {
-    var e = objs[index];
-
-    if (e.type !== "g") {
-      e.interactive = true;
-      e.buttonMode = true;
-      e.on("pointerover", onHoverUp, _this);
-      e.on("pointerout", onHowerDown, _this);
-    } else {
-      objs.push.apply(objs, _toConsumableArray(e.children));
-    }
-  }
-
-  app.stage.addChild(svgG);
+  app.stage.addChild(svgTigerObject); //, svgMapObject, );
 });
 var _last = undefined;
 

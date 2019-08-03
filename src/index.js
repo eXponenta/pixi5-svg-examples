@@ -1,9 +1,11 @@
-import { Application } from "pixi.js";
-import * as PIXI from "pixi.js";
+import { Application, GraphicsGeometry } from "pixi.js";
 import Svg from "./svg";
 import { Viewport } from "pixi-viewport";
 
-//import Svg2 from "pixi-vector-graphics";
+import * as PIXI from "pixi.js";
+window.PIXI = PIXI;
+
+//GraphicsGeometry.BATCHABLE_SIZE = 100000;
 
 const app = new Application({
 	width: window.innerWidth,
@@ -19,19 +21,21 @@ app.stage = new Viewport()
 	.wheel();
 
 app.loader.baseUrl = "./data";
-app.loader.add("svg", "map2.svg.txt", { crossOrigin: true }).load(() => {
-	const t = app.loader.resources["svg"].data;
-	const container = document.createElement("div");
-	container.innerHTML = t;
-	//    container.style.display = "inline-block";
-	const svgE = container.children[0];
+app.loader
+	//.add("svg", "map2.svg.txt")
+	.add("tiger", "m-test.svg.txt")
+	.load(() => {
 
+	//const map = app.loader.resources["svg"].data;
+	const tiger = app.loader.resources["tiger"].data;
 	//c.appendChild(container);
 
-	const svgG = new Svg(svgE, { unpackTree: true, fillColor: 0x00ff00 });
-
-	console.log(svgG);
-	let objs = [...svgG.children];
+	//const svgMapObject = new Svg(svgMap, { unpackTree: false});
+	const svgTigerObject = new Svg(tiger, { unpackTree: false, fillColor: "red"});
+	
+/*
+	console.log(svgMapObject);
+	let objs = [...svgMapObject.children];
 	let index = 0;
 
 	while (objs[++index]) {
@@ -45,8 +49,8 @@ app.loader.add("svg", "map2.svg.txt", { crossOrigin: true }).load(() => {
 			objs.push(...e.children);
 		}
 	}
-
-	app.stage.addChild(svgG);
+	*/
+	app.stage.addChild(svgTigerObject)//, svgMapObject, );
 });
 
 let _last = undefined;

@@ -94,7 +94,7 @@ const DEFAULT = {
 export default class SVG extends PIXI.Graphics {
 	/**
 	 * Create Gra[hocs from svg
-	 * @param {SVGElement} svg 
+	 * @param {SVGElement | string} svg 
 	 * @param {DefaultOptions} options 
 	 */
 	constructor(
@@ -103,6 +103,18 @@ export default class SVG extends PIXI.Graphics {
 	) {
 		super();
 		this.options = Object.assign({}, DEFAULT, options || {});
+		
+		if(!(svg instanceof SVGElement)){
+			const container = document.createElement("div");
+			container.innerHTML = svg;
+			
+			//@ts-ignore
+			svg = container.children[0];
+			if(! (svg instanceof SVGElement)){
+				throw new Error("invalid SVG!");
+			}
+		}
+
 		//@ts-ignore
 		this.svgChildren(svg.children);
 		this.type = "";
@@ -442,18 +454,22 @@ export default class SVG extends PIXI.Graphics {
 			y = 0;
 		const commands = dPathParse(d);
 		let prevCommand = undefined;
+		let combiner = "";
 
 		for (var i = 0; i < commands.length; i++) {
 			const command = commands[i];
-			//console.log(command.code, command);
 
 			switch (command.code) {
 				case "m": {
 					this.moveTo((x += command.end.x), (y += command.end.y));
+
+					combiner += `.moveTo(${x}, ${y})`;
 					break;
 				}
 				case "M": {
 					this.moveTo((x = command.end.x), (y = command.end.y));
+					
+					combiner += `.moveTo(${x}, ${y})`;
 					break;
 				}
 				case "H": {
@@ -475,10 +491,10 @@ export default class SVG extends PIXI.Graphics {
 				case "Z":
 				case "z": {
 					//jump corete to end
-					if (prevCommand && prevCommand.end) {
-						this.moveTo(prevCommand.end.x, prevCommand.end.y);
-					}
 					this.closePath();
+					//this.endFill();
+
+					combiner += ".closePath()"
 					break;
 				}
 				case "L": {
@@ -504,6 +520,8 @@ export default class SVG extends PIXI.Graphics {
 					}
 
 					this.bezierCurveTo(cp1.x, cp1.y, cp2.x, cp2.y, (x = command.end.x), (y = command.end.y));
+
+					combiner += `bezierCurveTo(${cp1.x}, ${cp1.y}, ${cp2.x}, ${cp2.y},${x}, ${y})`;
 					break;
 				}
 				case "C": {
@@ -529,6 +547,8 @@ export default class SVG extends PIXI.Graphics {
 						cp1.y = prevCommand.end.y - lc.y;
 					} else {
 						this.quadraticCurveTo(currX + cp2.x, currY + cp2.y, (x += command.end.x), (y += command.end.y));
+						
+						combiner += `.quadraticCurveTo(${currX + cp2.x}, ${currY + cp2.y}, ${x}, ${y})`;
 						break;
 					}
 
@@ -540,6 +560,8 @@ export default class SVG extends PIXI.Graphics {
 						(x += command.end.x),
 						(y += command.end.y)
 					);
+					
+					combiner += `.bezierCurveTo(${currX + cp1.x}, ${currY + cp1.y}, ${currX + cp2.x}, ${currY + cp2.y},${x}, ${y})`;
 					break;
 				}
 				case "c": {
@@ -556,6 +578,8 @@ export default class SVG extends PIXI.Graphics {
 						(x += command.end.x),
 						(y += command.end.y)
 					);
+					
+					combiner += `.bezierCurveTo(${currX + cp1.x}, ${currY + cp1.y}, ${currX + cp2.x}, ${currY + cp2.y},${x}, ${y})`;
 					break;
 				}
 				case "t": {
@@ -574,6 +598,9 @@ export default class SVG extends PIXI.Graphics {
 					const currX = x;
 					const currY = y;
 					this.quadraticCurveTo(currX + cp.x, currY + cp.y, (x += command.end.x), (y += command.end.y));
+
+					
+					combiner += `quadraticCurveTo(${currX + cp.x}, ${currY + cp.y},${x}, ${y})`;
 					break;
 				}
 				case "q": {
@@ -643,9 +670,13 @@ export default class SVG extends PIXI.Graphics {
 					console.info("[SVGUtils] Draw command not supported:", command.code, command);
 				}
 			}
+			
+			console.log(command.code, command, {x , y});
 
 			//save previous command fro C S and Q
 			prevCommand = command;
 		}
+		
+		console.log("combiner : ", combiner);
 	}
 }
