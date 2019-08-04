@@ -87148,8 +87148,8 @@ var tests = {
   "rs-test": "Short bezier (C) test",
   "s-test": "Bezier (s) test",
   "t-test": "Bezier (Q, T) test\n(selfcrossing bug)",
-  "bee": "Complex test: bee",
-  "tiger": "Complex test: tiger"
+  bee: "Complex test: bee",
+  tiger: "Complex test: tiger"
 };
 var app = new _pixi.Application({
   width: window.innerWidth,
@@ -87186,7 +87186,7 @@ app.loader.add(data).load(function () {
     title.anchor.set(0, 1);
     svg.scale.set(scale);
     svg.pivot.set(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
-    svg.position.set(x + pw * .5, y + (ph - 80) * .5);
+    svg.position.set(x + pw * 0.5, y + (ph - 80) * 0.5);
     svgContainer.addChild(svg);
     textContainer.addChild(title);
     stroke.drawRect(x, y, pw, ph - 80);

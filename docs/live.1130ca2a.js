@@ -87150,7 +87150,7 @@ function _iterableToArray(iter) { if (Symbol.iterator in Object(iter) || Object.
 function _arrayWithoutHoles(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } }
 
 var tests = {
-  "bee": "Complex test: bee"
+  bee: "Complex test: bee"
 };
 var app = new _pixi.Application({
   width: window.innerWidth,
@@ -87197,10 +87197,9 @@ app.loader.add(data).load(function () {
     var scale = Math.min((pw - offset * 2) / bounds.width, (ph - 80 - offset * 2) / bounds.height);
     svg.scale.set(scale);
     svg.pivot.set(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
-    svg.position.set(pw * .5, (ph - 80) * .5);
+    svg.position.set(pw * 0.5, (ph - 80) * 0.5);
     app.stage.scale.set(1);
-    app.stage.position.set(1, 1); //app.stage.resize(svg.width, svg.height);
-
+    app.stage.position.set(1, 1);
     app.stage.addChild(svg);
   }
 
