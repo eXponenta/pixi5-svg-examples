@@ -4,8 +4,8 @@
   "description": "Examples for pixi5-svg",
   "main": "index.html",
   "scripts": {
-    "start": "parcel server index.html --open",
-    "build": "parcel build index.html"
+    "start": "parcel server index.html --open -d ./docs --public-url ./",
+    "build": "parcel build index.html -d ./docs --public-url ./"
   },
   "dependencies": {
     "parcel-plugin-static-files-copy": "^2.2.0",
