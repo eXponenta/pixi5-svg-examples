@@ -40,7 +40,7 @@ app.loader.add(data).load(() => {
     });
 
 	function createAndFit(svgText) {
-		const svg = new Svg(svgText);
+		const svg = new Svg(svgText, {unpackTree : true});
 		console.log("Parsed svg", svg);
 		const bounds = svg.getBounds();
 		app.stage.removeChild(...app.stage.children);

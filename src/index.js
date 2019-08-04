@@ -39,7 +39,7 @@ app.loader.add(data).load(() => {
 
 	data.forEach((e, index) => {
 		const text = res[e.key].data;
-		const svg = new Svg(text);
+		const svg = new Svg(text,{ unpackTree : true });
 
 		const x = pw * (index % 4),
 			y = 80 + ((index / 4) | 0) * ph;

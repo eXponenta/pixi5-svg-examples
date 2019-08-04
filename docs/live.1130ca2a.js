@@ -83040,7 +83040,9 @@ class SVG extends PIXI.Graphics {
 
 
   svgPoly(node, close) {
-    const points = node.getAttribute("points").split(/[ ,]/g).map(p => parseFloat(p));
+    const pointsAttr = node.getAttribute("points");
+    const pointsRaw = pointsAttr.split(/[ ,]/g);
+    const points = pointsRaw.reduce((acc, p) => (p && acc.push(parseFloat(p)), acc), []);
     this.drawPolygon(points);
 
     if (!close) {
@@ -87188,7 +87190,9 @@ app.loader.add(data).load(function () {
   function createAndFit(svgText) {
     var _app$stage;
 
-    var svg = new _pixi5Svg.default(svgText);
+    var svg = new _pixi5Svg.default(svgText, {
+      unpackTree: true
+    });
     console.log("Parsed svg", svg);
     var bounds = svg.getBounds();
 
@@ -87237,7 +87241,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59543" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "49203" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
