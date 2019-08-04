@@ -1,25 +1,24 @@
 {
-  "name": "parcel-sandbox",
+  "name": "pixi5-svg-examples",
   "version": "1.0.0",
-  "description": "Simple Parcel Sandbox",
+  "description": "Examples for pixi5-svg",
   "main": "index.html",
   "scripts": {
     "start": "parcel server index.html --open",
     "build": "parcel build index.html"
   },
   "dependencies": {
-    "d-path-parser": "1.0.0",
     "parcel-plugin-static-files-copy": "^2.2.0",
     "pixi-viewport": "4.1.2",
-    "pixi.js": "5.1.0",
-    "tinycolor2": "1.4.1"
+    "pixi.js": "^5.1.1",
+    "pixi5-svg": "file:../pixi5-svg"
   },
   "devDependencies": {
     "@babel/core": "7.2.0",
     "parcel-bundler": "^1.6.1"
   },
   "staticFiles": {
-      "staticPath": "static",
-      "watcherGlob": "**/*.*"
+    "staticPath": "static",
+    "watcherGlob": "**/*.*"
   }
 }
