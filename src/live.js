@@ -9,7 +9,7 @@ const tests = {
 const app = new Application({
 	width: window.innerWidth,
 	height: window.innerHeight,
-	backgroundColor: 0xffffff,
+	backgroundColor: 0xcccccc,
 	antialias: true
 });
 

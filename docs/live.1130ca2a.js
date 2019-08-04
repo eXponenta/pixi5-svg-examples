@@ -82663,7 +82663,7 @@ class SVG extends PIXI.Graphics {
    * @param {SVGElement | string} svg
    * @param {DefaultOptions} options
    */
-  constructor(svg, options = DEFAULT) {
+  constructor(svg, options = DEFAULT, impotent = false) {
     super();
     this.options = Object.assign({}, DEFAULT, options || {});
 
@@ -82676,10 +82676,13 @@ class SVG extends PIXI.Graphics {
       if (!(svg instanceof SVGElement)) {
         throw new Error("invalid SVG!");
       }
-    } //@ts-ignore
+    }
 
+    if (!impotent) {
+      //@ts-ignore
+      this.svgChildren(svg.children);
+    }
 
-    this.svgChildren(svg.children);
     this.type = "";
   }
   /**
@@ -82819,13 +82822,13 @@ class SVG extends PIXI.Graphics {
   svgChildren(children, parentStyle, parentMatrix) {
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
-      const shape = this.options.unpackTree ? new SVG(child, this.options) : this;
       const nodeName = child.nodeName.toLowerCase();
       const nodeStyle = this.svgStyle(child);
-      const matrix = this.svgTransform(child); //compile full style inherited from all parents
+      const matrix = this.svgTransform(child);
+      const shape = this.options.unpackTree ? new SVG(child, this.options, true) : this; //compile full style inherited from all parents
 
       const fullStyle = Object.assign({}, parentStyle || {}, nodeStyle);
-      shape.fillShapes(child, fullStyle, matrix);
+      shape.fillShapes(fullStyle, matrix);
 
       switch (nodeName) {
         case "path":
@@ -83060,13 +83063,12 @@ class SVG extends PIXI.Graphics {
    * Set the fill and stroke style.
    * @private
    * @method SVG#fillShapes
-   * @param {SVGElement} node
    * @param {*} style
    * @param {PIXI.Matrix} matrix
    */
 
 
-  fillShapes(node, style, matrix) {
+  fillShapes(style, matrix) {
     const {
       fill,
       opacity,
@@ -83102,20 +83104,7 @@ class SVG extends PIXI.Graphics {
     }
 
     this.lineStyle(lineWidth, lineColor, strokeOpacityValue);
-    this.setMatrix(matrix); // @if DEBUG
-
-    if (node.getAttribute("stroke-linejoin")) {
-      console.info('[SVGUtils] "stroke-linejoin" attribute is not supported');
-    }
-
-    if (node.getAttribute("stroke-linecap")) {
-      console.info('[SVGUtils] "stroke-linecap" attribute is not supported');
-    }
-
-    if (node.getAttribute("fill-rule")) {
-      console.info('[SVGUtils] "fill-rule" attribute is not supported');
-    } // @endif
-
+    this.setMatrix(matrix);
   }
   /**
    * Render a <path> d element
@@ -87172,7 +87161,7 @@ var tests = {
 var app = new _pixi.Application({
   width: window.innerWidth,
   height: window.innerHeight,
-  backgroundColor: 0xffffff,
+  backgroundColor: 0xcccccc,
   antialias: true
 });
 var c = document.querySelector("#app");
