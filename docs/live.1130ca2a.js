@@ -82620,7 +82620,7 @@ function arcToBezier({
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.default = void 0;
+exports.default = exports.SVGNode = void 0;
 
 var _dPathParser = _interopRequireDefault(require("d-path-parser"));
 
@@ -82634,7 +82634,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-const EPS = 0.001;
+const EPS = 0.0001;
 /**
  * @typedef {Object} DefaultOptions
  * @property {number} [lineWidth] default stroke thickness (must be greater or equal of 1)
@@ -82655,35 +82655,19 @@ const DEFAULT = {
   lineWidth: 1
 };
 
-class SVG extends PIXI.Graphics {
+class SVGNode extends PIXI.Graphics {
   /**
-   * Create Graphics from svg
+   * Create Graphics from svg subnode
    * @class
    * @public
-   * @param {SVGElement | string} svg
+   * @param {SVGElement} svg
    * @param {DefaultOptions} options
    */
-  constructor(svg, options = DEFAULT, impotent = false) {
+  constructor(svg, options) {
     super();
-    this.options = Object.assign({}, DEFAULT, options || {});
-
-    if (!(svg instanceof SVGElement)) {
-      const container = document.createElement("div");
-      container.innerHTML = svg; //@ts-ignore
-
-      svg = container.children[0];
-
-      if (!(svg instanceof SVGElement)) {
-        throw new Error("invalid SVG!");
-      }
-    }
-
-    if (!impotent) {
-      //@ts-ignore
-      this.svgChildren(svg.children);
-    }
-
-    this.type = "";
+    this.options = options;
+    this.dataNode = svg;
+    this.type = svg.nodeName.toLowerCase();
   }
   /**
    * Get `GraphicsData` under cursor if available. Similar as `containsPoint`, but return internal `GraphicsData`
@@ -82822,10 +82806,10 @@ class SVG extends PIXI.Graphics {
   svgChildren(children, parentStyle, parentMatrix) {
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
-      const nodeName = child.nodeName.toLowerCase();
       const nodeStyle = this.svgStyle(child);
       const matrix = this.svgTransform(child);
-      const shape = this.options.unpackTree ? new SVG(child, this.options, true) : this; //compile full style inherited from all parents
+      const nodeName = child.nodeName.toLowerCase();
+      const shape = this.options.unpackTree ? new SVGNode(child, this.options) : this; //compile full style inherited from all parents
 
       const fullStyle = Object.assign({}, parentStyle || {}, nodeStyle);
       shape.fillShapes(fullStyle, matrix);
@@ -82886,7 +82870,6 @@ class SVG extends PIXI.Graphics {
 
       if (this.options.unpackTree) {
         shape.name = child.getAttribute("id") || "child_" + i;
-        shape.type = nodeName;
         this.addChild(shape);
       }
     }
@@ -82929,7 +82912,7 @@ class SVG extends PIXI.Graphics {
     const x2 = parseFloat(node.getAttribute("x2"));
     const y2 = parseFloat(node.getAttribute("y2")); //idiot chek
 
-    if (Math.abs(x1 - x2 + y1 - y2) <= EPS) return;
+    if (Math.abs(x1 - x2) + Math.abs(y1 - y2) <= EPS) return;
     this.moveTo(x1, y1);
     this.lineTo(x2, y2);
   }
@@ -83173,9 +83156,8 @@ class SVG extends PIXI.Graphics {
             const {
               x: nx,
               y: ny
-            } = command.end; //idiot chek
-
-            if (Math.abs(x - nx + y - ny) <= EPS) break;
+            } = command.end;
+            if (Math.abs(x - nx) + Math.abs(y - ny) <= EPS) break;
             this.lineTo(x = nx, y = ny);
             break;
           }
@@ -83186,7 +83168,7 @@ class SVG extends PIXI.Graphics {
               x: dx,
               y: dy
             } = command.end;
-            if (Math.abs(dx + dy) <= EPS) break;
+            if (Math.abs(dx) + Math.abs(dy) <= EPS) break;
             this.lineTo(x += dx, y += dy);
             break;
           }
@@ -83363,6 +83345,36 @@ class SVG extends PIXI.Graphics {
 
       prevCommand = command;
     }
+  }
+
+}
+
+exports.SVGNode = SVGNode;
+
+class SVG extends SVGNode {
+  /**
+   * Create Graphics from svg
+   * @class
+   * @public
+   * @param {SVGElement | string} svg
+   * @param {DefaultOptions} options
+   */
+  constructor(svg, options = DEFAULT) {
+    if (!(svg instanceof SVGElement)) {
+      const container = document.createElement("div");
+      container.innerHTML = svg; //@ts-ignore
+
+      svg = container.children[0];
+
+      if (!(svg instanceof SVGElement)) {
+        throw new Error("invalid SVG!");
+      }
+    }
+
+    super(svg, Object.assign({}, DEFAULT, options || {})); //@ts-ignore
+
+    this.svgChildren(svg.children);
+    this.type = "svg";
   }
 
 }
@@ -87245,7 +87257,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "49203" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "51168" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
