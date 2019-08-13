@@ -1,6 +1,6 @@
 {
   "name": "pixi5-svg-examples",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Examples for pixi5-svg",
   "main": "index.html",
   "scripts": {
