@@ -6,7 +6,7 @@ const tests = {
 	"a-test": "Test arc",
 	"shape-test": "Shapes test\n(miter bug)",
 	"rotate-test": "Rotate and translate test!\n(bounds bug)",
-	"rs-test": "Short bezier (C) test",
+	'Zm': "Test Z after M",
 	"s-test": "Bezier (s) test",
 	"t-test": "Bezier (Q, T) test\n(selfcrossing bug)",
 	bee: "Complex test: bee",

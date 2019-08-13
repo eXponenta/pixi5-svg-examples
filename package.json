@@ -4,7 +4,7 @@
   "description": "Examples for pixi5-svg",
   "main": "index.html",
   "scripts": {
-    "start": "parcel server *.html --open -d ./docs --public-url ./",
+    "start": "parcel server *.html -d ./docs --public-url ./",
     "build": "parcel build *.html -d ./docs --public-url ./"
   },
   "dependencies": {
