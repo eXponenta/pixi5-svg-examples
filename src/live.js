@@ -27,20 +27,43 @@ app.loader.add(data).load(() => {
 	const ph = app.screen.height;
 	const offset = 40;
 	const fileReader = new FileReader();
-    const input = document.querySelector("#file-input");
+	const input = document.querySelector("#file-input");
+	const toogle = document.querySelector("#toogle");
+	const ptime = document.querySelector("#parsing-time");
+	const pchildrens = document.querySelector("#childrens");
+	
+	let lastFileResult = undefined;
 
+	toogle.addEventListener("change", (_)=>{
+		if(!lastFileResult) return;
+		createAndFit(lastFileResult);
+	});
 	input.addEventListener("change", e => {
 		const files = e.target.files;
 		const svg = files[0];
 
 		fileReader.onloadend = _ => {
+			lastFileResult = fileReader.result;
 			createAndFit(fileReader.result);
 		};
 		fileReader.readAsText(svg);
     });
 
 	function createAndFit(svgText) {
-		const svg = new Svg(svgText, {unpackTree : true});
+		const start = performance.now();
+		const svg = new Svg(svgText, {unpackTree : toogle.checked});
+		const delta = performance.now() - start;
+		
+		ptime.textContent = delta.toFixed(2) + "ms";
+
+		let count = 1;
+		const counter = (node)=>{
+			count += node.children.length;
+			node.children.forEach((e)=> counter(e))
+		};
+
+		counter(svg);
+		pchildrens.textContent = "" + count;
 		console.log("Parsed svg", svg);
 		const bounds = svg.getBounds();
 		app.stage.removeChild(...app.stage.children);
@@ -56,6 +79,7 @@ app.loader.add(data).load(() => {
 
 	data.forEach((e, index) => {
 		const text = res[e.key].data;
+		lastFileResult = text;
 		createAndFit(text);
 	});
 });

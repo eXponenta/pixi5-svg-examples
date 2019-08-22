@@ -7,11 +7,25 @@
 	<link rel="stylesheet" href="./src/styles.css">
 </head>
 
-<body>
-    <div id="app"></div>
-    <input type="file" title="Select svg element" id = "file-input" type="image/svg+xml" accept="*.svg"></input>
-	<script src="src/live.js">
-	</script>
-</body>
-
+	<body>
+		<div id="app"></div>
+		<div class="form">
+			<input class="row" type="file" title="Select svg element" id = "file-input" type="image/svg+xml" accept="*.svg"></input>
+			<label class="label row">
+				<div class="toggle">
+				<input id="toogle" class="toggle-state" type="checkbox" name="check" value="check" checked />
+				<div class="toggle-inner">
+					<div class="indicator"></div>
+				</div>
+				<div class="active-bg"></div>
+				</div>
+				<div class="label-text">Unpack Node Tree (slowly render)</div>
+			</label>
+			<div class="row">
+				<div>Parsing time:<span id="parsing-time">0ms</span></div>
+				<div>Result count:<span id="childrens">0</span></div>	
+			</div>
+		</div>
+		<script src="src/live.js"></script>
+	</body>
 </html>
