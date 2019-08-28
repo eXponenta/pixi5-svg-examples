@@ -1,30 +1,17 @@
-import { Application, Container, Graphics, Text } from "pixi.js";
+
 import Svg from "pixi5-svg";
-import { Viewport } from "pixi-viewport";
-
-const tests = {
-	bee: "Complex test: bee"
-};
-
-const app = new Application({
-	width: window.innerWidth,
-	height: window.innerHeight,
-	backgroundColor: 0xcccccc,
-	antialias: true
-});
 
 const c = document.querySelector("#app");
-app.stage = new Viewport()
-	.drag()
-	.pinch()
-	.wheel();
+const canvas = document.createElement("canvas");
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
 
-const data = Object.keys(tests).map(e => ({ key: e, url: e + ".svg.txt" }));
-app.loader.baseUrl = "./data";
-app.loader.add(data).load(() => {
-	const res = app.loader.resources;
-	const pw = app.screen.width;
-	const ph = app.screen.height;
+const ctx = canvas.getContext("2d");
+
+fetch("./data/bee.svg.txt").then((r) => r.text()).then( (data) => {
+
+	const pw = canvas.width;
+	const ph = canvas.height;
 	const offset = 40;
 	const fileReader = new FileReader();
 	const input = document.querySelector("#file-input");
@@ -32,12 +19,20 @@ app.loader.add(data).load(() => {
 	const ptime = document.querySelector("#parsing-time");
 	const pchildrens = document.querySelector("#childrens");
 	
+	let translate = {
+		x:  0, y : 0
+	}
+	
+	let scale = 1;
+	let svgE = undefined;
+	let lastFrame = undefined;
+
 	let lastFileResult = undefined;
 
 	toogle.addEventListener("change", (_)=>{
-		if(!lastFileResult) return;
-		createAndFit(lastFileResult);
+		lastFrame = undefined;
 	});
+
 	input.addEventListener("change", e => {
 		const files = e.target.files;
 		const svg = files[0];
@@ -49,9 +44,47 @@ app.loader.add(data).load(() => {
 		fileReader.readAsText(svg);
     });
 
+	function render(cached = false) {
+		
+		ctx.setTransform(new DOMMatrix());
+
+		ctx.fillStyle = "#aaaaaa";
+		ctx.fillRect(0,0,canvas.width, canvas.height);
+		
+		if(!cached || !lastFrame){
+			
+			ctx.translate(translate.x , translate.y);
+			ctx.scale(scale, scale);
+
+			svgE.draw(ctx, true);
+
+			if(!lastFrame) {
+				const i =  new Image();
+					i.src = canvas.toDataURL();
+				lastFrame = {
+					frame : i,
+					translate: {...translate},
+					scale: scale
+				}
+			}
+
+		} else {
+
+			let cx = translate.x - lastFrame.translate.x;
+			let cy = translate.y - lastFrame.translate.y;
+			let cs = scale / lastFrame.scale;
+			let f = lastFrame.frame;
+			
+			ctx.translate(cx, cy);
+			ctx.scale(cs, cs);
+			ctx.drawImage(f, 0,0);
+		}
+	}
+
 	function createAndFit(svgText) {
 		const start = performance.now();
-		const svg = new Svg(svgText, {unpackTree : toogle.checked});
+		svgE = window.svg = new Svg(svgText, {unpackTree : true});
+		
 		const delta = performance.now() - start;
 		
 		ptime.textContent = delta.toFixed(2) + "ms";
@@ -62,26 +95,46 @@ app.loader.add(data).load(() => {
 			node.children.forEach((e)=> counter(e))
 		};
 
-		counter(svg);
+		counter(svgE);
 		pchildrens.textContent = "" + count;
-		console.log("Parsed svg", svg);
-		const bounds = svg.getBounds();
-		app.stage.removeChild(...app.stage.children);
+		console.log("Parsed svg", svgE);
 
-		const scale = Math.min((pw - offset * 2) / bounds.width, (ph - 80 - offset * 2) / bounds.height);
-		svg.scale.set(scale);
-		svg.pivot.set(bounds.x + bounds.width * 0.5, bounds.y + bounds.height * 0.5);
-		svg.position.set(pw * 0.5, (ph - 80) * 0.5);
-		app.stage.scale.set(1);
-		app.stage.position.set(1, 1);
-		app.stage.addChild(svg);
+		scale = 1 / Math.max(svgE.width / canvas.width, svgE.height / canvas.height);
+		translate.x = 0.5 * (canvas.width - svgE.width * scale);
+		translate.y = 0.5 * (canvas.height - svgE.height * scale);
+
+		render();
 	}
 
-	data.forEach((e, index) => {
-		const text = res[e.key].data;
-		lastFileResult = text;
-		createAndFit(text);
+	
+	createAndFit(data);
+
+	canvas.addEventListener("pointermove", e =>{
+		
+		if(e.buttons !== 1) return;
+
+		translate.x += e.movementX;
+		translate.y += e.movementY;
+		
+		render(!toogle.checked);
 	});
+
+	document.addEventListener("wheel", e =>{
+		
+		const factor = 1 - 0.1 * e.deltaY / 220;
+		scale *= factor;
+		const dx = e.clientX;
+		const dy = e.clientY;
+
+		const ox = translate.x - dx;
+		const oy = translate.y - dy;
+		
+		translate.x = ox * factor + dx;
+		translate.y = oy * factor + dy;
+
+		render(!toogle.checked);
+	});
+	
 });
 
-c.appendChild(app.view);
+c.appendChild(canvas);
