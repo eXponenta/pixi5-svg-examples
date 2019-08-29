@@ -11,9 +11,10 @@
 		<div id="app"></div>
 		<div class="form">
 			<input class="row" type="file" title="Select svg element" id = "file-input" type="image/svg+xml" accept="*.svg"></input>
+			
 			<label class="label row">
 				<div class="toggle">
-				<input id="toogle" class="toggle-state" type="checkbox" name="check" value="check" checked />
+				<input id="toogle-unpack" class="toggle-state" type="checkbox" name="check" value="check" checked />
 				<div class="toggle-inner">
 					<div class="indicator"></div>
 				</div>
@@ -21,6 +22,18 @@
 				</div>
 				<div class="label-text">Unpack Node Tree (slowly render)</div>
 			</label>
+
+			<label class="label row">
+				<div class="toggle">
+				<input id="toogle-pallete" class="toggle-state" type="checkbox" name="check" value="check" />
+				<div class="toggle-inner">
+					<div class="indicator"></div>
+				</div>
+				<div class="active-bg"></div>
+				</div>
+				<div class="label-text">Use fill pallete</div>
+			</label>
+			
 			<div class="row">
 				<div>Parsing time:<span id="parsing-time">0ms</span></div>
 				<div>Result count:<span id="childrens">0</span></div>	
