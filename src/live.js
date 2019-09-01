@@ -1,9 +1,10 @@
-import { Application, Sprite, Texture, GraphicsGeometry } from "pixi.js";
+import { Application, Sprite, Texture, GraphicsGeometry, Renderer } from "pixi.js";
 import  Svg  from "pixi5-svg";
+import { Paletted } from "pixi5-svg"
 import { Viewport } from "pixi-viewport";
 
+Paletted.registerPlugin(Renderer);
 
-GraphicsGeometry.BATCHABLE_SIZE = Infinity;
 
 const tests = {
 	bee: "Complex test: bee"
@@ -94,14 +95,22 @@ app.loader.add(data).load(() => {
 		v.position.set(1, 1);
 		v.addChild(svg);
 
-		if(svg.pallete) {
-			pallete = new Sprite(new Texture(svg.pallete.texture));
+		if(svg.palette) {
+			pallete = new Sprite(new Texture(svg.palette.texture));
 			
 			pallete.scale.set(4);
 			
 			app.stage.addChild(pallete);
 		}
 	}
+
+	const g = new Paletted.PalettedGraphics();
+
+	g.beginFill(0xff00ff);
+	g.lineStyle(10, 0x00ff00);
+	g.drawCircle(100,100,100);
+
+	app.stage.addChild(g);
 
 	data.forEach((e, index) => {
 		const text = res[e.key].data;
