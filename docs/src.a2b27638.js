@@ -82861,9 +82861,10 @@ class StyleDefenition {
 }
 
 class Palette {
-  constructor(owner = undefined, size = 256) {
-    const canvas = document.createElement("canvas");
-    canvas.width = canvas.height = size;
+  constructor(owner = undefined, size = 128) {
+    const canvas = document.createElement("canvas"); //хз почему, но юниформы не синкаются, не получется передать в шейдер размер палитры
+
+    canvas.width = canvas.height = 128;
     this._styles = new Map();
     this._ctx = canvas.getContext("2d");
     this._data = undefined;
@@ -83034,7 +83035,7 @@ class Palette {
 }
 
 exports.Palette = Palette;
-},{"../extends":"node_modules/pixi5-svg/src/extends.js"}],"node_modules/pixi5-svg/src/filledgeometry.js":[function(require,module,exports) {
+},{"../extends":"node_modules/pixi5-svg/src/extends.js"}],"node_modules/pixi5-svg/src/paletted/filledgeometry.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -83042,7 +83043,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.FilledGeometry = void 0;
 
-var _extends = require("./extends");
+var _extends = require("../extends");
 
 class FilledGeometry extends _extends.pixi.GraphicsGeometry {
   constructor(use32 = false) {
@@ -83076,7 +83077,7 @@ class FilledGeometry extends _extends.pixi.GraphicsGeometry {
 }
 
 exports.FilledGeometry = FilledGeometry;
-},{"./extends":"node_modules/pixi5-svg/src/extends.js"}],"node_modules/pixi5-svg/src/paletted/palettedgraphics.js":[function(require,module,exports) {
+},{"../extends":"node_modules/pixi5-svg/src/extends.js"}],"node_modules/pixi5-svg/src/paletted/palettedgraphics.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -83086,25 +83087,25 @@ exports.PalettedGraphics = void 0;
 
 var _extends = require("../extends");
 
-var _filledgeometry = require("../filledgeometry");
+var _filledgeometry = require("./filledgeometry");
 
 var _palette = require("./palette");
 
 class PalettedGraphics extends _extends.pixi.Graphics {
-  constructor(pallete = undefined, use32 = false) {
+  constructor(palette = undefined, use32 = false) {
     super(new _filledgeometry.FilledGeometry(use32));
-    this.init(pallete);
+    this.init(palette);
   }
   /**
    * Init 
-   * @param {Palette} [pallete] 
+   * @param {Palette} [palette] 
    */
 
 
-  init(pallete = undefined) {
-    this.palletIDs = [];
+  init(palette = undefined) {
+    this.paletteIDs = [];
     this.pluginName = "palettedGraphics";
-    this._palette = pallete || new _palette.Palette(this, 64);
+    this._palette = palette || new _palette.Palette(this, 64);
     this._currentStyleId = undefined;
   }
 
@@ -83121,7 +83122,7 @@ class PalettedGraphics extends _extends.pixi.Graphics {
 
     this.beginTextureFill(fillTexture, nextId);
     this._currentStyleId = nextId;
-    this.palletIDs.push(nextId);
+    this.paletteIDs.push(nextId);
     return this;
   }
 
@@ -83130,7 +83131,7 @@ class PalettedGraphics extends _extends.pixi.Graphics {
       stroke: {
         color,
         alpha,
-        width: Math.max(0, 255),
+        width: Math.max(0, .8),
         aligment
       }
     }, false);
@@ -83157,7 +83158,7 @@ class PalettedGraphics extends _extends.pixi.Graphics {
 }
 
 exports.PalettedGraphics = PalettedGraphics;
-},{"../extends":"node_modules/pixi5-svg/src/extends.js","../filledgeometry":"node_modules/pixi5-svg/src/filledgeometry.js","./palette":"node_modules/pixi5-svg/src/paletted/palette.js"}],"node_modules/pixi5-svg/src/paletted/palettedgraphicsrender.js":[function(require,module,exports) {
+},{"../extends":"node_modules/pixi5-svg/src/extends.js","./filledgeometry":"node_modules/pixi5-svg/src/paletted/filledgeometry.js","./palette":"node_modules/pixi5-svg/src/paletted/palette.js"}],"node_modules/pixi5-svg/src/paletted/palettedgraphicsrender.js":[function(require,module,exports) {
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -83261,9 +83262,11 @@ const vertex = `
 		gl_Position = vec4((projectionMatrix * translationMatrix * vec3(aVertexPosition, 1.0)).xy, 0.0, 1.0);
 
 		float shapeId = dot(aColor, cColor2ID);
-		highp int textureId = int(vTextureId);
-		
-		float size = uSamplersSize[textureId];
+        highp int textureId = int(vTextureId);
+        
+        //какие-то проблемы с рендерерром
+
+		float size = 1./128.;//uSamplersSize[textureId];
 		float hsize = size * 4.;
 
 		vStrokeData = vec4(aColor.r, 0., 0., 0.);
@@ -83296,7 +83299,7 @@ const fragment = `
         float width = vStrokeData.y;
         float align = vStrokeData.z;
         float factor = abs (uv.y - .5) * 2.;
-        float gap = max(.075, width * 0.05) ;
+        float gap = max(.075, width * 0.1) ;
         
         vec4 stroke = vStrokeColor;
         stroke *= 1. - smoothstep(width - gap, width  + gap, factor);

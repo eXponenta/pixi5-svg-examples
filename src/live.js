@@ -5,7 +5,7 @@ import { Viewport } from "pixi-viewport";
 
 Paletted.registerPlugin(Renderer);
 
-
+GraphicsGeometry.BATCHABLE_SIZE = Infinity;
 const tests = {
 	bee: "Complex test: bee"
 };
@@ -109,8 +109,11 @@ app.loader.add(data).load(() => {
 	g.beginFill(0xff00ff);
 	g.lineStyle(10, 0x00ff00);
 	g.drawCircle(100,100,100);
+	g.endFill();
 
 	app.stage.addChild(g);
+
+	window.app = app;
 
 	data.forEach((e, index) => {
 		const text = res[e.key].data;
