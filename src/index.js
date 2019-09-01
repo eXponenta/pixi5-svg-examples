@@ -1,6 +1,9 @@
-import { Application, Container, Graphics, Text } from "pixi.js";
+import { Application, Container, Graphics, Text, Renderer } from "pixi.js";
 import Svg from "pixi5-svg";
 import { Viewport } from "pixi-viewport";
+
+import { Paletted } from "pixi5-svg";
+Paletted.registerPlugin(Renderer);
 
 const tests = {
 	"a-test": "Test arc",
